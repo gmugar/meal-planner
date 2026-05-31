@@ -100,7 +100,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 const SUPABASE_URL = 'https://wmaaeeuamnxtlxntmflr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtYWFlZXVhbW54dGx4bnRtZmxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODU5MTMsImV4cCI6MjA5NTc2MTkxM30.ubfOnetA-mNc1tzJP8Yvwz3sgVB0mn5Nwu5VWrVK20Y';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let syncConnected = false;
 let saving = false;
 
@@ -256,7 +256,7 @@ function setSyncStatus(status) {
 
 async function loadFromSupabase() {
   try {
-    const { data, error } = await supabase.from('meal_state').select('*').eq('id', 1).single();
+    const { data, error } = await sb.from('meal_state').select('*').eq('id', 1).single();
     if (error) throw error;
     if (data) {
       state.selected = data.selected || [];
@@ -279,7 +279,7 @@ async function saveToSupabase() {
   saving = true;
   localStorage.setItem('mealPlannerState', JSON.stringify(state));
   try {
-    const { error } = await supabase.from('meal_state').upsert({
+    const { error } = await sb.from('meal_state').upsert({
       id: 1,
       selected: state.selected,
       checked: state.checked,
@@ -301,7 +301,7 @@ function save() {
 }
 
 // Realtime subscription
-supabase.channel('meal_state_changes')
+sb.channel('meal_state_changes')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_state' }, (payload) => {
     if (saving) return; // ignore our own writes
     const data = payload.new;
