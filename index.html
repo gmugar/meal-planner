@@ -4,13 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Meal Planner & Shopping List</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f7f6f3;--card:#fff;--text:#1a1a1a;--muted:#6b6b6b;--border:#e5e3de;--accent:#d85a30;--accent-light:#faece7;--accent-text:#712b13;--green:#1d9e75;--green-light:#e1f5ee;--green-text:#085041;--blue:#378add;--blue-light:#e6f1fb;--blue-text:#0c447c;--purple:#7f77dd;--purple-light:#eeedfe;--purple-text:#3c3489;--gold:#ba7517;--gold-light:#faeeda;--gold-text:#633806;--shadow:0 1px 3px rgba(0,0,0,0.06)}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
-.header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 20px;position:sticky;top:0;z-index:100}
+.header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 20px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:flex-start}
 .header h1{font-size:20px;font-weight:600}
 .header p{font-size:13px;color:var(--muted);margin-top:2px}
+.sync-badge{font-size:11px;padding:3px 8px;border-radius:6px;font-weight:500;white-space:nowrap;margin-top:2px}
+.sync-badge.connected{background:var(--green-light);color:var(--green-text)}
+.sync-badge.connecting{background:var(--gold-light);color:var(--gold-text)}
+.sync-badge.offline{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
 .tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:99;overflow-x:auto}
 .tab{flex:1;padding:12px 8px;text-align:center;font-size:13px;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;min-width:0}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -70,45 +75,484 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </style>
 </head>
 <body>
+
 <div class="header">
-  <h1>Meal Planner</h1>
-  <p>Simple Home Edit &middot; Budget Bytes &middot; Half Baked Harvest</p>
+  <div>
+    <h1>Meal Planner</h1>
+    <p>Simple Home Edit &middot; Budget Bytes &middot; Half Baked Harvest</p>
+  </div>
+  <div class="sync-badge connecting" id="sync-status">connecting...</div>
 </div>
+
 <div class="tabs">
   <button class="tab active" onclick="showView('browse')">Browse<span class="badge" id="browse-count">10</span></button>
   <button class="tab" onclick="showView('favorites')">Favorites<span class="badge" id="fav-count">0</span></button>
   <button class="tab" onclick="showView('meals')">My Meals<span class="badge" id="meals-count">0</span></button>
   <button class="tab" onclick="showView('list')">Shopping List<span class="badge" id="list-count">0</span></button>
 </div>
+
 <div id="browse-view" class="view active"></div>
 <div id="favorites-view" class="view"></div>
 <div id="meals-view" class="view"></div>
 <div id="list-view" class="view"></div>
+
 <script>
-const RECIPES = [{id:"ramen",name:"One-Pan Beef Ramen Noodles",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",desc:"Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",tags:["one-pan","dairy-free"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Garlic, minced",qty:"2 tsp"},{name:"Baby bok choy",qty:"1 bunch"},{name:"Bean sprouts",qty:"2\u00bd cups"},{name:"Scallion",qty:"1"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tamari or soy sauce",qty:"\u00bc cup"},{name:"Sesame oil",qty:"2 tsp"},{name:"Hoisin sauce",qty:"\u00bc cup"},{name:"Mirin",qty:"2 tbsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},{cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"3 x 3 oz"}]}]},
-{id:"lasagne",name:"One-Pot Lasagne",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/one-pot-lasagna/",desc:"All the comfort of lasagne made in one pot on the stovetop, finished under the broiler.",tags:["one-pot"],servings:8,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"2\u00bc lb"}]},{cat:"Produce",items:[{name:"Onions",qty:"2"},{name:"Garlic cloves",qty:"3"},{name:"Carrots, large",qty:"2"},{name:"Fresh basil",qty:"\u00bd cup"},{name:"Bay leaves",qty:"2"}]},{cat:"Dairy",items:[{name:"Mozzarella, shredded",qty:"2 cups"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"4 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Passata",qty:"24 fl oz"},{name:"Beef stock",qty:"3 cups"}]},{cat:"Spices",items:[{name:"Sea salt",qty:"\u00bd tsp"},{name:"Black pepper",qty:"1 tsp"}]},{cat:"Noodles & Pasta",items:[{name:"Lasagne sheets",qty:"9 oz"}]}]},
-{id:"bigmac-tacos",name:"Big Mac Tacos",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/big-mac-tacos/",desc:"All the flavors of a Big Mac folded into crispy smashed tacos with that special burger sauce.",tags:["fakeaway"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Onion",qty:"\u00bd"},{name:"Shredded lettuce",qty:"2 cups"},{name:"Dill pickles, sliced",qty:"\u00bd cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},{cat:"Dairy",items:[{name:"American cheese slices",qty:"8"}]},{cat:"Pantry",items:[{name:"Olive oil spray",qty:"1 can"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},{cat:"Spices",items:[{name:"Sweet paprika",qty:"\u00bd tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"\u00bd tsp"}]},{cat:"Noodles & Pasta",items:[{name:"Small flour tortillas",qty:"8"}]}]},
-{id:"taco-mac",name:"One-Pan Taco Mac & Cheese",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/one-pan-taco-mac-and-cheese/",desc:"Taco-seasoned beef and pasta cooked together in one pan, loaded with melted cheese.",tags:["one-pan"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Onion, brown",qty:"1"},{name:"Garlic, minced",qty:"1 tbsp"},{name:"Cilantro",qty:"\u00bc bunch"},{name:"Scallion",qty:"1"}]},{cat:"Dairy",items:[{name:"Cream cheese",qty:"3\u00bd oz"},{name:"Cheddar, shredded",qty:"\u00bd cup"},{name:"Mexican cheese blend",qty:"1\u00bd cups"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Crushed tomatoes (can)",qty:"14 oz"},{name:"Corn kernels (can)",qty:"14 oz"},{name:"Beef stock",qty:"4 cups"}]},{cat:"Spices",items:[{name:"Ground cumin",qty:"2 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"\u00bd tsp"},{name:"Black pepper",qty:"\u00bc tsp"}]},{cat:"Noodles & Pasta",items:[{name:"Pasta (macaroni, shells, or penne)",qty:"14 oz"}]}]},
-{id:"bigmac-bowl",name:"Loaded Potato Big Mac Bowl",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/loaded-potato-big-mac-bowl/",desc:"Crispy potatoes loaded with seasoned beef, pickles, lettuce, and special burger sauce. No bun required.",tags:["gluten-free","fakeaway"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef, lean",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Potatoes",qty:"1\u00bd lb"},{name:"Onion",qty:"1"},{name:"Romaine lettuce",qty:"1 head"},{name:"Dill pickles, sliced",qty:"\u00bd cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},{cat:"Dairy",items:[{name:"Melting cheese blend, shredded",qty:"2 cups"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"3 tbsp"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},{cat:"Spices",items:[{name:"Sweet paprika",qty:"3 tsp"},{name:"Onion powder",qty:"2\u00bd tsp"},{name:"Garlic powder",qty:"1\u00bd tsp"},{name:"Sea salt",qty:"1\u00bd tsp"},{name:"Black pepper",qty:"\u00bd tsp"}]}]},{id:"hoisin-beef",name:"Sticky Hoisin Beef",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/sticky-hoisin-beef/",desc:"Ground beef in a sticky hoisin glaze with wide rice noodles, cabbage, and carrots.",tags:["dairy-free","fakeaway"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tbsp"},{name:"Scallions",qty:"2"},{name:"Carrot",qty:"1"},{name:"Napa cabbage, shredded",qty:"4 cups"},{name:"Lime wedges",qty:"to serve"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Sesame oil",qty:"1 tsp + for noodles"},{name:"Hoisin sauce",qty:"\u00bc cup"},{name:"Tamari or soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tbsp"},{name:"Crushed roasted peanuts (optional)",qty:"\u00bc cup"}]},{cat:"Noodles & Pasta",items:[{name:"Wide flat rice noodles",qty:"7 oz"}]}]},
-{id:"bbq-meatballs",name:"Sticky BBQ Meatballs",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/sticky-bbq-meatballs/",desc:"Homemade beef meatballs tossed in a sticky, glossy BBQ glaze. Served with rice.",tags:["dairy-free"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Onion, small (grated)",qty:"\u00bd"},{name:"Garlic, minced",qty:"3 tsp"},{name:"Scallions",qty:"to serve"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Panko breadcrumbs",qty:"\u00bd cup"},{name:"Egg",qty:"1"},{name:"Ketchup",qty:"\u00bd cup"},{name:"Brown sugar",qty:"\u00bc cup packed"},{name:"Honey",qty:"1 tbsp"},{name:"Soy sauce",qty:"2 tbsp"},{name:"Worcestershire sauce",qty:"1 tbsp"},{name:"Apple cider vinegar",qty:"1 tbsp"},{name:"Jasmine rice",qty:"to serve"}]},{cat:"Spices",items:[{name:"Onion powder",qty:"1 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"\u00bd tsp"}]}]},
-{id:"peking-beef",name:"Peking-Style Beef",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/peking-style-beef/",desc:"Ground beef with hoisin, soy, and five-spice served over rice with cucumber ribbons.",tags:["dairy-free","fakeaway"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tsp"},{name:"Fresh ginger, grated",qty:"1 tbsp"},{name:"Cucumbers",qty:"2"},{name:"Scallions",qty:"2"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Hoisin sauce",qty:"3 tbsp"},{name:"Soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tsp"},{name:"Cornstarch",qty:"1 tsp"},{name:"Sesame oil",qty:"1 tsp"},{name:"Sesame seeds",qty:"to serve"},{name:"Jasmine rice",qty:"to serve"}]},{cat:"Spices",items:[{name:"Chinese five-spice (optional)",qty:"\u00bd tsp"}]}]},
-{id:"gyros-tacos",name:"Gyros Smashed Tacos",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/gyros-smashed-tacos/",desc:"Greek-spiced beef or lamb smashed onto tortillas, served gyro-style with tzatziki.",tags:["dairy-free","fakeaway"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Ground beef or lamb",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Tomatoes",qty:"2"},{name:"Flat-leaf parsley",qty:"\u00bc bunch"},{name:"Lemon wedges",qty:"to serve"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"2 tbsp"},{name:"Tzatziki",qty:"to serve"}]},{cat:"Spices",items:[{name:"Garlic powder",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Ground cumin",qty:"1 tsp"},{name:"Sweet paprika",qty:"\u00bd tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"\u00bd tsp"}]},{cat:"Noodles & Pasta",items:[{name:"Mini flour tortillas (6 inch)",qty:"8"}]}]},
-{id:"chicken-ramen",name:"Chicken & Broccoli Ramen",site:"Simple Home Edit",url:"https://simplehomeedit.com/recipe/one-pan-chicken-and-broccoli-ramen-noodles/",desc:"Chicken thighs with broccoli and ramen noodles in a honey-soy glaze. All in one pan.",tags:["one-pan","dairy-free"],servings:4,ingredients:[{cat:"Meat",items:[{name:"Boneless skinless chicken thighs, diced",qty:"1 lb"}]},{cat:"Produce",items:[{name:"Scallions",qty:"2"},{name:"Garlic, minced",qty:"2 tsp"},{name:"Fresh ginger, minced",qty:"2 tsp"},{name:"Broccoli, large head",qty:"1"}]},{cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Honey",qty:"\u00bc cup"},{name:"Dark soy sauce",qty:"2 tbsp"},{name:"Oyster sauce",qty:"2 tbsp"},{name:"Mirin",qty:"2 tbsp"},{name:"Ketchup",qty:"1 tbsp"},{name:"Sesame oil",qty:"2 tsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},{cat:"Spices",items:[{name:"Black pepper",qty:"\u00bc tsp"}]},{cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"4 x 3 oz"}]}]}
+const SUPABASE_URL = 'https://wmaaeeuamnxtlxntmflr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtYWFlZXVhbW54dGx4bnRtZmxyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODU5MTMsImV4cCI6MjA5NTc2MTkxM30.ubfOnetA-mNc1tzJP8Yvwz3sgVB0mn5Nwu5VWrVK20Y';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let syncConnected = false;
+let saving = false;
+
+const RECIPES = [
+  {
+    id:"ramen",name:"One-Pan Beef Ramen Noodles",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
+    desc:"Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",
+    tags:["one-pan","dairy-free"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Garlic, minced",qty:"2 tsp"},{name:"Baby bok choy",qty:"1 bunch"},{name:"Bean sprouts",qty:"2½ cups"},{name:"Scallion",qty:"1"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tamari or soy sauce",qty:"¼ cup"},{name:"Sesame oil",qty:"2 tsp"},{name:"Hoisin sauce",qty:"¼ cup"},{name:"Mirin",qty:"2 tbsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"3 x 3 oz"}]}
+    ]
+  },
+  {
+    id:"lasagne",name:"One-Pot Lasagne",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pot-lasagna/",
+    desc:"All the comfort of lasagne made in one pot on the stovetop, finished under the broiler.",
+    tags:["one-pot"],servings:8,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"2¼ lb"}]},
+      {cat:"Produce",items:[{name:"Onions",qty:"2"},{name:"Garlic cloves",qty:"3"},{name:"Carrots, large",qty:"2"},{name:"Fresh basil",qty:"½ cup"},{name:"Bay leaves",qty:"2"}]},
+      {cat:"Dairy",items:[{name:"Mozzarella, shredded",qty:"2 cups"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"4 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Passata",qty:"24 fl oz"},{name:"Beef stock",qty:"3 cups"}]},
+      {cat:"Spices",items:[{name:"Sea salt",qty:"½ tsp"},{name:"Black pepper",qty:"1 tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Lasagne sheets",qty:"9 oz"}]}
+    ]
+  },
+  {
+    id:"bigmac-tacos",name:"Big Mac Tacos",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/big-mac-tacos/",
+    desc:"All the flavors of a Big Mac folded into crispy smashed tacos with that special burger sauce.",
+    tags:["fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Onion",qty:"½"},{name:"Shredded lettuce",qty:"2 cups"},{name:"Dill pickles, sliced",qty:"½ cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},
+      {cat:"Dairy",items:[{name:"American cheese slices",qty:"8"}]},
+      {cat:"Pantry",items:[{name:"Olive oil spray",qty:"1 can"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},
+      {cat:"Spices",items:[{name:"Sweet paprika",qty:"½ tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Small flour tortillas",qty:"8"}]}
+    ]
+  },
+  {
+    id:"taco-mac",name:"One-Pan Taco Mac & Cheese",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pan-taco-mac-and-cheese/",
+    desc:"Taco-seasoned beef and pasta cooked together in one pan, loaded with melted cheese.",
+    tags:["one-pan"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Onion, brown",qty:"1"},{name:"Garlic, minced",qty:"1 tbsp"},{name:"Cilantro",qty:"¼ bunch"},{name:"Scallion",qty:"1"}]},
+      {cat:"Dairy",items:[{name:"Cream cheese",qty:"3½ oz"},{name:"Cheddar, shredded",qty:"½ cup"},{name:"Mexican cheese blend",qty:"1½ cups"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Crushed tomatoes (can)",qty:"14 oz"},{name:"Corn kernels (can)",qty:"14 oz"},{name:"Beef stock",qty:"4 cups"}]},
+      {cat:"Spices",items:[{name:"Ground cumin",qty:"2 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"½ tsp"},{name:"Black pepper",qty:"¼ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Pasta (macaroni, shells, or penne)",qty:"14 oz"}]}
+    ]
+  },
+  {
+    id:"bigmac-bowl",name:"Loaded Potato Big Mac Bowl",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/loaded-potato-big-mac-bowl/",
+    desc:"Crispy potatoes loaded with seasoned beef, pickles, lettuce, and special burger sauce. No bun required.",
+    tags:["gluten-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef, lean",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Potatoes",qty:"1½ lb"},{name:"Onion",qty:"1"},{name:"Romaine lettuce",qty:"1 head"},{name:"Dill pickles, sliced",qty:"½ cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},
+      {cat:"Dairy",items:[{name:"Melting cheese blend, shredded",qty:"2 cups"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"3 tbsp"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},
+      {cat:"Spices",items:[{name:"Sweet paprika",qty:"3 tsp"},{name:"Onion powder",qty:"2½ tsp"},{name:"Garlic powder",qty:"1½ tsp"},{name:"Sea salt",qty:"1½ tsp"},{name:"Black pepper",qty:"½ tsp"}]}
+    ]
+  },
+  {
+    id:"hoisin-beef",name:"Sticky Hoisin Beef",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/sticky-hoisin-beef/",
+    desc:"Ground beef in a sticky hoisin glaze with wide rice noodles, cabbage, and carrots.",
+    tags:["dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tbsp"},{name:"Scallions",qty:"2"},{name:"Carrot",qty:"1"},{name:"Napa cabbage, shredded",qty:"4 cups"},{name:"Lime wedges",qty:"to serve"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Sesame oil",qty:"1 tsp + for noodles"},{name:"Hoisin sauce",qty:"¼ cup"},{name:"Tamari or soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tbsp"},{name:"Crushed roasted peanuts (optional)",qty:"¼ cup"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Wide flat rice noodles",qty:"7 oz"}]}
+    ]
+  },
+  {
+    id:"bbq-meatballs",name:"Sticky BBQ Meatballs",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/sticky-bbq-meatballs/",
+    desc:"Homemade beef meatballs tossed in a sticky, glossy BBQ glaze. Served with rice.",
+    tags:["dairy-free"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Onion, small (grated)",qty:"½"},{name:"Garlic, minced",qty:"3 tsp"},{name:"Scallions",qty:"to serve"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Panko breadcrumbs",qty:"½ cup"},{name:"Egg",qty:"1"},{name:"Ketchup",qty:"½ cup"},{name:"Brown sugar",qty:"¼ cup packed"},{name:"Honey",qty:"1 tbsp"},{name:"Soy sauce",qty:"2 tbsp"},{name:"Worcestershire sauce",qty:"1 tbsp"},{name:"Apple cider vinegar",qty:"1 tbsp"},{name:"Jasmine rice",qty:"to serve"}]},
+      {cat:"Spices",items:[{name:"Onion powder",qty:"1 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]}
+    ]
+  },
+  {
+    id:"peking-beef",name:"Peking-Style Beef",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/peking-style-beef/",
+    desc:"Ground beef with hoisin, soy, and five-spice served over rice with cucumber ribbons.",
+    tags:["dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tsp"},{name:"Fresh ginger, grated",qty:"1 tbsp"},{name:"Cucumbers",qty:"2"},{name:"Scallions",qty:"2"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Hoisin sauce",qty:"3 tbsp"},{name:"Soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tsp"},{name:"Cornstarch",qty:"1 tsp"},{name:"Sesame oil",qty:"1 tsp"},{name:"Sesame seeds",qty:"to serve"},{name:"Jasmine rice",qty:"to serve"}]},
+      {cat:"Spices",items:[{name:"Chinese five-spice (optional)",qty:"½ tsp"}]}
+    ]
+  },
+  {
+    id:"gyros-tacos",name:"Gyros Smashed Tacos",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/gyros-smashed-tacos/",
+    desc:"Greek-spiced beef or lamb smashed onto tortillas, served gyro-style with tzatziki.",
+    tags:["dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef or lamb",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Tomatoes",qty:"2"},{name:"Flat-leaf parsley",qty:"¼ bunch"},{name:"Lemon wedges",qty:"to serve"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"2 tbsp"},{name:"Tzatziki",qty:"to serve"}]},
+      {cat:"Spices",items:[{name:"Garlic powder",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Ground cumin",qty:"1 tsp"},{name:"Sweet paprika",qty:"½ tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Mini flour tortillas (6 inch)",qty:"8"}]}
+    ]
+  },
+  {
+    id:"chicken-ramen",name:"Chicken & Broccoli Ramen",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pan-chicken-and-broccoli-ramen-noodles/",
+    desc:"Chicken thighs with broccoli and ramen noodles in a honey-soy glaze. All in one pan.",
+    tags:["one-pan","dairy-free"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Boneless skinless chicken thighs, diced",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Scallions",qty:"2"},{name:"Garlic, minced",qty:"2 tsp"},{name:"Fresh ginger, minced",qty:"2 tsp"},{name:"Broccoli, large head",qty:"1"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Honey",qty:"¼ cup"},{name:"Dark soy sauce",qty:"2 tbsp"},{name:"Oyster sauce",qty:"2 tbsp"},{name:"Mirin",qty:"2 tbsp"},{name:"Ketchup",qty:"1 tbsp"},{name:"Sesame oil",qty:"2 tsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},
+      {cat:"Spices",items:[{name:"Black pepper",qty:"¼ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"4 x 3 oz"}]}
+    ]
+  }
 ];
-let state = JSON.parse(localStorage.getItem('mealPlannerState')||'null') || {selected:[],checked:{},favorites:[]};
-if (!state.favorites) state.favorites = [];
-function save(){localStorage.setItem('mealPlannerState',JSON.stringify(state))}
-function showView(view){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));const views=['browse','favorites','meals','list'];document.getElementById(view+'-view').classList.add('active');document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');render()}
-function toggleMeal(id){const idx=state.selected.indexOf(id);if(idx===-1){state.selected.push(id)}else{state.selected.splice(idx,1);Object.keys(state.checked).forEach(k=>{if(k.startsWith(id+'|'))delete state.checked[k]})}save();render()}
-function toggleFavorite(id){const idx=state.favorites.indexOf(id);if(idx===-1){state.favorites.push(id)}else{state.favorites.splice(idx,1)}save();render()}
-function toggleCheck(key){state.checked[key]=!state.checked[key];save();render()}
-function uncheckAll(){state.checked={};save();render()}
-function getShoppingList(){const catOrder=['Meat','Produce','Dairy','Pantry','Spices','Noodles & Pasta'];const groups={};state.selected.forEach(id=>{const r=RECIPES.find(r=>r.id===id);if(!r)return;r.ingredients.forEach(g=>{if(!groups[g.cat])groups[g.cat]=[];g.items.forEach(item=>{groups[g.cat].push({name:item.name,qty:item.qty,meal:r.name,mealId:r.id,key:r.id+'|'+item.name})})})});const consolidated={};Object.keys(groups).forEach(cat=>{consolidated[cat]=[];const seen={};groups[cat].forEach(item=>{const normName=item.name.toLowerCase().replace(/,.*$/,'').trim();if(seen[normName]){seen[normName].meals.push(item.meal);seen[normName].keys.push(item.key);if(item.qty!==seen[normName].qty){seen[normName].qty+=' + '+item.qty}}else{const entry={name:item.name,qty:item.qty,meals:[item.meal],keys:[item.key]};seen[normName]=entry;consolidated[cat].push(entry)}})});const sorted=[];catOrder.forEach(cat=>{if(consolidated[cat])sorted.push({cat,items:consolidated[cat]})});Object.keys(consolidated).forEach(cat=>{if(!catOrder.includes(cat))sorted.push({cat,items:consolidated[cat]})});return sorted}
-function toggleCheckGroup(){const keys=Array.from(arguments);const allChecked=keys.every(k=>state.checked[k]);keys.forEach(k=>state.checked[k]=!allChecked);save();render()}
-function renderCard(r,isSelected){const isFav=state.favorites.includes(r.id);let html='<div class="card">';html+='<div class="card-header"><div class="card-title-row"><div>';html+='<h3>'+r.name+'</h3>';html+='<div class="tags">';r.tags.forEach(t=>{if(t==='dairy-free')html+='<span class="tag tag-df">DF</span>';else if(t==='gluten-free')html+='<span class="tag tag-gf">GF</span>';else if(t.startsWith('one-'))html+='<span class="tag tag-one">'+t+'</span>';else if(t==='fakeaway')html+='<span class="tag tag-one">fakeaway</span>'});html+='<span class="tag" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">serves '+r.servings+'</span>';html+='</div></div></div>';html+='<div class="card-actions">';html+='<button class="btn-star'+(isFav?' starred':'')+'" onclick="toggleFavorite(\''+r.id+'\')" aria-label="'+(isFav?'Remove from favorites':'Add to favorites')+'">'+(isFav?'\u2605':'\u2606')+'</button>';if(isSelected){html+='<button class="btn btn-remove btn-sm" onclick="toggleMeal(\''+r.id+'\')">Remove</button>'}else{html+='<button class="btn btn-add btn-sm" onclick="toggleMeal(\''+r.id+'\')">Add</button>'}html+='</div></div>';html+='<p class="desc">'+r.desc+'</p>';html+='<a class="source" href="'+r.url+'" target="_blank">View full recipe \u2197</a>';html+='<span class="source-site">'+r.site+'</span>';html+='</div>';return html}
-function render(){const browseEl=document.getElementById('browse-view');const favEl=document.getElementById('favorites-view');const mealsEl=document.getElementById('meals-view');const listEl=document.getElementById('list-view');document.getElementById('browse-count').textContent=RECIPES.length;document.getElementById('meals-count').textContent=state.selected.length;document.getElementById('fav-count').textContent=state.favorites.length;const approved=RECIPES.filter(r=>state.selected.includes(r.id));const available=RECIPES.filter(r=>!state.selected.includes(r.id));let browseHTML='';if(approved.length>0){browseHTML+='<div class="section-label">Approved ('+approved.length+')</div>';approved.forEach(r=>{browseHTML+=renderCard(r,true)})}if(available.length>0){browseHTML+='<div class="section-label">Available ('+available.length+')</div>';available.forEach(r=>{browseHTML+=renderCard(r,false)})}browseEl.innerHTML=browseHTML;const favRecipes=RECIPES.filter(r=>state.favorites.includes(r.id));if(favRecipes.length===0){favEl.innerHTML='<div class="empty"><div class="icon">\u2b50</div><p>No favorites yet.<br>Star recipes you love to save them here.</p></div>'}else{let favHTML='<div class="fav-banner">\u2b50 Your starred recipes \u2014 tap the star on any meal to save it here for easy access.</div>';favRecipes.forEach(r=>{const isSelected=state.selected.includes(r.id);favHTML+=renderCard(r,isSelected)});favEl.innerHTML=favHTML}
-if(state.selected.length===0){mealsEl.innerHTML='<div class="empty"><div class="icon">\ud83c\udf5d</div><p>No meals selected yet.<br>Browse and add some meals to get started.</p></div>'}else{const totalServings=state.selected.reduce((sum,id)=>{const r=RECIPES.find(r=>r.id===id);return sum+(r?r.servings:0)},0);let html='<div class="summary-bar" style="margin:-16px -16px 16px;border-radius:0"><div class="count">'+state.selected.length+' meal'+(state.selected.length!==1?'s':'')+'</div><div class="servings">~'+totalServings+' servings</div></div>';state.selected.forEach(id=>{const r=RECIPES.find(r=>r.id===id);if(r)html+=renderCard(r,true)});mealsEl.innerHTML=html}
-const shopList=getShoppingList();if(state.selected.length===0){listEl.innerHTML='<div class="empty"><div class="icon">\ud83d\uded2</div><p>Add meals to generate<br>your shopping list.</p></div>';document.getElementById('list-count').textContent='0'}else{let totalItems=0;let checkedItems=0;shopList.forEach(g=>g.items.forEach(item=>{totalItems++;if(item.keys.every(k=>state.checked[k]))checkedItems++}));document.getElementById('list-count').textContent=totalItems-checkedItems||totalItems;const pct=totalItems?Math.round((checkedItems/totalItems)*100):0;let html='<div class="progress-text">'+checkedItems+' of '+totalItems+' items checked</div>';html+='<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';html+='<div class="list-actions"><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';shopList.forEach(group=>{html+='<div class="section-label">'+group.cat+'</div>';group.items.forEach(item=>{const isChecked=item.keys.every(k=>state.checked[k]);html+='<div class="shop-item'+(isChecked?' checked':'')+'">';html+='<input type="checkbox" '+(isChecked?'checked':'')+' onchange="toggleCheckGroup(\''+item.keys.map(k=>k.replace(/'/g,"\\'")).join("','")+'\')">';html+='<div class="item-details">';html+='<div class="item-name">'+item.name+'</div>';html+='<div class="item-qty">'+item.qty+'</div>';html+='<div class="item-meals">';const uniqueMeals=[...new Set(item.meals)];uniqueMeals.forEach(m=>{html+='<span class="meal-dot">'+m.split(' ').slice(0,3).join(' ')+'</span>'});html+='</div></div></div>'})});listEl.innerHTML=html}}
+
+/* ── State management with Supabase sync ── */
+let state = { selected: [], checked: {}, favorites: [] };
+
+// Load from localStorage first for instant render
+const cached = localStorage.getItem('mealPlannerState');
+if (cached) {
+  try {
+    const parsed = JSON.parse(cached);
+    state = { selected: parsed.selected || [], checked: parsed.checked || {}, favorites: parsed.favorites || [] };
+  } catch(e) {}
+}
+
+function setSyncStatus(status) {
+  const el = document.getElementById('sync-status');
+  el.className = 'sync-badge ' + status;
+  el.textContent = status === 'connected' ? 'synced' : status === 'connecting' ? 'connecting...' : 'offline';
+}
+
+async function loadFromSupabase() {
+  try {
+    const { data, error } = await supabase.from('meal_state').select('*').eq('id', 1).single();
+    if (error) throw error;
+    if (data) {
+      state.selected = data.selected || [];
+      state.checked = data.checked || {};
+      state.favorites = data.favorites || [];
+      localStorage.setItem('mealPlannerState', JSON.stringify(state));
+      render();
+    }
+    syncConnected = true;
+    setSyncStatus('connected');
+  } catch(e) {
+    console.log('Supabase load failed, using local cache:', e.message);
+    syncConnected = false;
+    setSyncStatus('offline');
+  }
+}
+
+async function saveToSupabase() {
+  if (saving) return;
+  saving = true;
+  localStorage.setItem('mealPlannerState', JSON.stringify(state));
+  try {
+    const { error } = await supabase.from('meal_state').upsert({
+      id: 1,
+      selected: state.selected,
+      checked: state.checked,
+      favorites: state.favorites,
+      updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    syncConnected = true;
+    setSyncStatus('connected');
+  } catch(e) {
+    console.log('Supabase save failed:', e.message);
+    setSyncStatus('offline');
+  }
+  saving = false;
+}
+
+function save() {
+  saveToSupabase();
+}
+
+// Realtime subscription
+supabase.channel('meal_state_changes')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_state' }, (payload) => {
+    if (saving) return; // ignore our own writes
+    const data = payload.new;
+    if (data) {
+      state.selected = data.selected || [];
+      state.checked = data.checked || {};
+      state.favorites = data.favorites || [];
+      localStorage.setItem('mealPlannerState', JSON.stringify(state));
+      render();
+    }
+  })
+  .subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      syncConnected = true;
+      setSyncStatus('connected');
+    }
+  });
+
+// Initial load from Supabase
+loadFromSupabase();
+
+/* ── App logic ── */
+
+function showView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const views = ['browse','favorites','meals','list'];
+  document.getElementById(view+'-view').classList.add('active');
+  document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
+  render();
+}
+
+function toggleMeal(id) {
+  const idx = state.selected.indexOf(id);
+  if (idx === -1) {
+    state.selected.push(id);
+  } else {
+    state.selected.splice(idx, 1);
+    Object.keys(state.checked).forEach(k => {
+      if (k.startsWith(id+'|')) delete state.checked[k];
+    });
+  }
+  save();
+  render();
+}
+
+function toggleFavorite(id) {
+  const idx = state.favorites.indexOf(id);
+  if (idx === -1) {
+    state.favorites.push(id);
+  } else {
+    state.favorites.splice(idx, 1);
+  }
+  save();
+  render();
+}
+
+function toggleCheck(key) {
+  state.checked[key] = !state.checked[key];
+  save();
+  render();
+}
+
+function uncheckAll() {
+  state.checked = {};
+  save();
+  render();
+}
+
+function getShoppingList() {
+  const catOrder = ['Meat','Produce','Dairy','Pantry','Spices','Noodles & Pasta'];
+  const groups = {};
+
+  state.selected.forEach(id => {
+    const r = RECIPES.find(r => r.id === id);
+    if (!r) return;
+    r.ingredients.forEach(g => {
+      if (!groups[g.cat]) groups[g.cat] = [];
+      g.items.forEach(item => {
+        groups[g.cat].push({
+          name: item.name,
+          qty: item.qty,
+          meal: r.name,
+          mealId: r.id,
+          key: r.id + '|' + item.name
+        });
+      });
+    });
+  });
+
+  const consolidated = {};
+  Object.keys(groups).forEach(cat => {
+    consolidated[cat] = [];
+    const seen = {};
+    groups[cat].forEach(item => {
+      const normName = item.name.toLowerCase().replace(/,.*$/,'').trim();
+      if (seen[normName]) {
+        seen[normName].meals.push(item.meal);
+        seen[normName].keys.push(item.key);
+        if (item.qty !== seen[normName].qty) {
+          seen[normName].qty += ' + ' + item.qty;
+        }
+      } else {
+        const entry = {name: item.name, qty: item.qty, meals:[item.meal], keys:[item.key]};
+        seen[normName] = entry;
+        consolidated[cat].push(entry);
+      }
+    });
+  });
+
+  const sorted = [];
+  catOrder.forEach(cat => {
+    if (consolidated[cat]) sorted.push({cat, items: consolidated[cat]});
+  });
+  Object.keys(consolidated).forEach(cat => {
+    if (!catOrder.includes(cat)) sorted.push({cat, items: consolidated[cat]});
+  });
+  return sorted;
+}
+
+function render() {
+  const browseEl = document.getElementById('browse-view');
+  const favEl = document.getElementById('favorites-view');
+  const mealsEl = document.getElementById('meals-view');
+  const listEl = document.getElementById('list-view');
+
+  document.getElementById('browse-count').textContent = RECIPES.length;
+  document.getElementById('meals-count').textContent = state.selected.length;
+  document.getElementById('fav-count').textContent = state.favorites.length;
+
+  // Browse view
+  const approved = RECIPES.filter(r => state.selected.includes(r.id));
+  const available = RECIPES.filter(r => !state.selected.includes(r.id));
+
+  let browseHTML = '';
+  if (approved.length > 0) {
+    browseHTML += '<div class="section-label">Approved (' + approved.length + ')</div>';
+    approved.forEach(r => { browseHTML += renderCard(r, true); });
+  }
+  if (available.length > 0) {
+    browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
+    available.forEach(r => { browseHTML += renderCard(r, false); });
+  }
+  browseEl.innerHTML = browseHTML;
+
+  // Favorites view
+  const favRecipes = RECIPES.filter(r => state.favorites.includes(r.id));
+  if (favRecipes.length === 0) {
+    favEl.innerHTML = '<div class="empty"><div class="icon">&#11088;</div><p>No favorites yet.<br>Star recipes you love to save them here.</p></div>';
+  } else {
+    let favHTML = '<div class="fav-banner">&#11088; Your starred recipes — tap the star on any meal to save it here for easy access.</div>';
+    favRecipes.forEach(r => {
+      const isSelected = state.selected.includes(r.id);
+      favHTML += renderCard(r, isSelected);
+    });
+    favEl.innerHTML = favHTML;
+  }
+
+  // Meals view
+  if (state.selected.length === 0) {
+    mealsEl.innerHTML = '<div class="empty"><div class="icon">&#127869;</div><p>No meals selected yet.<br>Browse and add some meals to get started.</p></div>';
+  } else {
+    const totalServings = state.selected.reduce((sum, id) => {
+      const r = RECIPES.find(r => r.id === id);
+      return sum + (r ? r.servings : 0);
+    }, 0);
+    let html = '<div class="summary-bar" style="margin:-16px -16px 16px;border-radius:0"><div class="count">' + state.selected.length + ' meal' + (state.selected.length!==1?'s':'') + '</div><div class="servings">~' + totalServings + ' servings</div></div>';
+    state.selected.forEach(id => {
+      const r = RECIPES.find(r => r.id === id);
+      if (r) html += renderCard(r, true);
+    });
+    mealsEl.innerHTML = html;
+  }
+
+  // Shopping list view
+  const shopList = getShoppingList();
+  if (state.selected.length === 0) {
+    listEl.innerHTML = '<div class="empty"><div class="icon">&#128722;</div><p>Add meals to generate<br>your shopping list.</p></div>';
+    document.getElementById('list-count').textContent = '0';
+  } else {
+    let totalItems = 0;
+    let checkedItems = 0;
+    shopList.forEach(g => g.items.forEach(item => {
+      totalItems++;
+      if (item.keys.every(k => state.checked[k])) checkedItems++;
+    }));
+    document.getElementById('list-count').textContent = totalItems - checkedItems || totalItems;
+
+    const pct = totalItems ? Math.round((checkedItems / totalItems) * 100) : 0;
+    let html = '<div class="progress-text">' + checkedItems + ' of ' + totalItems + ' items checked</div>';
+    html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+    html += '<div class="list-actions"><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
+
+    shopList.forEach(group => {
+      html += '<div class="section-label">' + group.cat + '</div>';
+      group.items.forEach(item => {
+        const isChecked = item.keys.every(k => state.checked[k]);
+        html += '<div class="shop-item' + (isChecked ? ' checked' : '') + '">';
+        html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleCheckGroup(\'' + item.keys.map(k=>k.replace(/'/g,"\\'")).join("','") + '\')">';
+        html += '<div class="item-details">';
+        html += '<div class="item-name">' + item.name + '</div>';
+        html += '<div class="item-qty">' + item.qty + '</div>';
+        html += '<div class="item-meals">';
+        const uniqueMeals = [...new Set(item.meals)];
+        uniqueMeals.forEach(m => {
+          html += '<span class="meal-dot">' + m.split(' ').slice(0,3).join(' ') + '</span>';
+        });
+        html += '</div></div></div>';
+      });
+    });
+    listEl.innerHTML = html;
+  }
+}
+
+function toggleCheckGroup() {
+  const keys = Array.from(arguments);
+  const allChecked = keys.every(k => state.checked[k]);
+  keys.forEach(k => state.checked[k] = !allChecked);
+  save();
+  render();
+}
+
+function renderCard(r, isSelected) {
+  const isFav = state.favorites.includes(r.id);
+  let html = '<div class="card">';
+  html += '<div class="card-header"><div class="card-title-row"><div>';
+  html += '<h3>' + r.name + '</h3>';
+  html += '<div class="tags">';
+  r.tags.forEach(t => {
+    if (t==='dairy-free') html += '<span class="tag tag-df">DF</span>';
+    else if (t==='gluten-free') html += '<span class="tag tag-gf">GF</span>';
+    else if (t.startsWith('one-')) html += '<span class="tag tag-one">' + t + '</span>';
+    else if (t==='fakeaway') html += '<span class="tag tag-one">fakeaway</span>';
+  });
+  html += '<span class="tag" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">serves ' + r.servings + '</span>';
+  html += '</div></div></div>';
+  html += '<div class="card-actions">';
+  html += '<button class="btn-star' + (isFav ? ' starred' : '') + '" onclick="toggleFavorite(\'' + r.id + '\')" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + (isFav ? '&#9733;' : '&#9734;') + '</button>';
+  if (isSelected) {
+    html += '<button class="btn btn-remove btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Remove</button>';
+  } else {
+    html += '<button class="btn btn-add btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Add</button>';
+  }
+  html += '</div></div>';
+  html += '<p class="desc">' + r.desc + '</p>';
+  html += '<a class="source" href="' + r.url + '" target="_blank">View full recipe &#8599;</a>';
+  html += '<span class="source-site">' + r.site + '</span>';
+  html += '</div>';
+  return html;
+}
+
 render();
 </script>
 </body>
