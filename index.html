@@ -99,6 +99,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .modal-meal-tags{font-size:11px;color:var(--muted);margin-top:2px}
 .modal-cancel{display:block;width:100%;padding:12px;border:none;background:var(--bg);border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;margin-top:8px}
 .modal-cancel:active{background:var(--border)}
+/* Recipe Detail Modal */
+.detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+.detail-header h3{font-size:18px;font-weight:600;line-height:1.3}
+.detail-close{background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0}
+.detail-close:active{color:var(--text)}
+.detail-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.detail-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.detail-section{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px;margin-top:12px}
+.detail-ingredient{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:14px}
+.detail-ingredient:last-child{border-bottom:none}
+.detail-ing-name{flex:1;min-width:0}
+.detail-ing-qty{color:var(--muted);font-size:13px;flex-shrink:0;margin-left:12px;text-align:right}
+.detail-source{display:inline-block;margin-top:16px;font-size:13px;color:var(--blue);text-decoration:none;padding:10px 16px;border:1px solid var(--blue);border-radius:8px;text-align:center;width:100%}
+.detail-source:active{background:var(--blue-light)}
+.cal-meal-name{cursor:pointer}
+.cal-meal-name:active{color:var(--accent)}
+.inbox-section{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:16px;box-shadow:var(--shadow)}
+.inbox-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.inbox-meal{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--accent-light);border:1px dashed var(--accent);border-radius:8px;margin-bottom:6px}
+.inbox-meal:last-child{margin-bottom:0}
+.inbox-meal-name{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.inbox-meal-name:active{color:var(--accent)}
+.inbox-meal-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.inbox-assign-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:500;cursor:pointer}
+.inbox-assign-btn:active{opacity:0.8}
+.inbox-remove-btn{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px;line-height:1}
+.inbox-remove-btn:active{color:var(--accent)}
 @media(min-width:600px){
   .view{max-width:600px;margin:0 auto}
   .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -119,14 +146,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="tabs">
   <button class="tab active" onclick="showView('browse')">Browse<span class="badge" id="browse-count">10</span></button>
   <button class="tab" onclick="showView('favorites')">Favorites<span class="badge" id="fav-count">0</span></button>
-  <button class="tab" onclick="showView('meals')">My Meals<span class="badge" id="meals-count">0</span></button>
-  <button class="tab" onclick="showView('calendar')">Calendar</button>
+  <button class="tab" onclick="showView('calendar')">Calendar<span class="badge" id="meals-count">0</span></button>
   <button class="tab" onclick="showView('list')">Shopping List<span class="badge" id="list-count">0</span></button>
 </div>
 
 <div id="browse-view" class="view active"></div>
 <div id="favorites-view" class="view"></div>
-<div id="meals-view" class="view"></div>
 <div id="calendar-view" class="view"></div>
 <div id="list-view" class="view"></div>
 
@@ -365,7 +390,7 @@ loadFromSupabase();
 function showView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const views = ['browse','favorites','meals','calendar','list'];
+  const views = ['browse','favorites','calendar','list'];
   document.getElementById(view+'-view').classList.add('active');
   document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
   render();
@@ -460,20 +485,30 @@ function renderPicker() {
   if (!pickerDate) return;
   const old = document.getElementById('meal-picker-modal');
   if (old) old.remove();
-  const avail = state.selected.map(id => RECIPES.find(r => r.id === id)).filter(Boolean);
   const dayMeals = state.calendar[pickerDate] || [];
   const d = new Date(pickerDate + 'T12:00:00');
+  // Show approved meals first, then unapproved
+  const approvedRecipes = RECIPES.filter(r => state.selected.includes(r.id));
+  const otherRecipes = RECIPES.filter(r => !state.selected.includes(r.id));
   let h = '<div class="modal-overlay" id="meal-picker-modal" onclick="if(event.target===this)closePicker()">';
   h += '<div class="modal">';
-  if (avail.length === 0) {
-    h += '<h3>No meals available</h3>';
-    h += '<p class="modal-sub">Add meals from the Browse tab first, then assign them to days here.</p>';
-  } else {
-    h += '<h3>Add meal to ' + dayName(d) + '</h3>';
-    h += '<p class="modal-sub">' + fmtDate(d) + ' — pick from your approved meals</p>';
-    avail.forEach(r => {
+  h += '<h3>Add meal to ' + dayName(d) + '</h3>';
+  h += '<p class="modal-sub">' + fmtDate(d) + '</p>';
+  if (approvedRecipes.length > 0) {
+    approvedRecipes.forEach(r => {
       const added = dayMeals.includes(r.id);
       h += '<div class="modal-meal' + (added?' added':'') + '" ' + (added?'':'onclick="addMealToDay(\''+pickerDate+'\',\''+r.id+'\')"') + '>';
+      h += '<div class="modal-meal-info"><div class="modal-meal-name">' + r.name + '</div>';
+      h += '<div class="modal-meal-tags">serves ' + r.servings + (added?' · already added':'') + '</div></div>';
+      if (!added) h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
+      h += '</div>';
+    });
+  }
+  if (otherRecipes.length > 0) {
+    if (approvedRecipes.length > 0) h += '<div class="section-label" style="margin-top:8px">More recipes</div>';
+    otherRecipes.forEach(r => {
+      const added = dayMeals.includes(r.id);
+      h += '<div class="modal-meal' + (added?' added':'') + '" ' + (added?'':'onclick="addMealToDayAndSelect(\''+pickerDate+'\',\''+r.id+'\')"') + '>';
       h += '<div class="modal-meal-info"><div class="modal-meal-name">' + r.name + '</div>';
       h += '<div class="modal-meal-tags">serves ' + r.servings + (added?' · already added':'') + '</div></div>';
       if (!added) h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
@@ -493,12 +528,84 @@ function addMealToDay(dateStr, mealId) {
   render();
 }
 
+function addMealToDayAndSelect(dateStr, mealId) {
+  if (!state.selected.includes(mealId)) state.selected.push(mealId);
+  addMealToDay(dateStr, mealId);
+}
+
 function removeMealFromDay(dateStr, mealId) {
   if (!state.calendar[dateStr]) return;
   state.calendar[dateStr] = state.calendar[dateStr].filter(id => id !== mealId);
   if (state.calendar[dateStr].length === 0) delete state.calendar[dateStr];
   save();
   render();
+}
+
+function openInboxAssign(mealId) {
+  const r = RECIPES.find(r => r.id === mealId);
+  if (!r) return;
+  const old = document.getElementById('inbox-assign-modal');
+  if (old) old.remove();
+  const weekDates = getWeekDates(calWeekOffset);
+  let h = '<div class="modal-overlay" id="inbox-assign-modal" onclick="if(event.target===this)closeInboxAssign()">';
+  h += '<div class="modal">';
+  h += '<h3>Assign ' + r.name + '</h3>';
+  h += '<p class="modal-sub">Pick a day this week</p>';
+  weekDates.forEach(d => {
+    const dk = dateKey(d);
+    const today = isToday(d);
+    const existing = (state.calendar[dk]||[]).length;
+    h += '<div class="modal-meal" onclick="addMealToDay(\'' + dk + '\',\'' + mealId + '\');closeInboxAssign()">';
+    h += '<div class="modal-meal-info"><div class="modal-meal-name">' + dayName(d) + (today?' · Today':'') + '</div>';
+    h += '<div class="modal-meal-tags">' + fmtDate(d) + (existing ? ' · ' + existing + ' meal' + (existing!==1?'s':'') : '') + '</div></div>';
+    h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
+    h += '</div>';
+  });
+  h += '<button class="modal-cancel" onclick="closeInboxAssign()">Cancel</button>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function closeInboxAssign() {
+  const m = document.getElementById('inbox-assign-modal');
+  if (m) m.remove();
+}
+
+function openRecipeDetail(mealId) {
+  const r = RECIPES.find(r => r.id === mealId);
+  if (!r) return;
+  const old = document.getElementById('recipe-detail-modal');
+  if (old) old.remove();
+  let h = '<div class="modal-overlay" id="recipe-detail-modal" onclick="if(event.target===this)closeRecipeDetail()">';
+  h += '<div class="modal" style="max-height:85vh">';
+  h += '<div class="detail-header"><h3>' + r.name + '</h3>';
+  h += '<button class="detail-close" onclick="closeRecipeDetail()">&times;</button></div>';
+  h += '<div class="detail-tags">';
+  r.tags.forEach(t => {
+    if (t==='dairy-free') h += '<span class="tag tag-df">Dairy-Free</span>';
+    else if (t==='gluten-free') h += '<span class="tag tag-gf">Gluten-Free</span>';
+    else if (t.startsWith('one-')) h += '<span class="tag tag-one">' + t + '</span>';
+    else if (t==='fakeaway') h += '<span class="tag tag-one">fakeaway</span>';
+  });
+  h += '<span class="tag" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">serves ' + r.servings + '</span>';
+  h += '</div>';
+  h += '<p class="detail-desc">' + r.desc + '</p>';
+  r.ingredients.forEach(g => {
+    h += '<div class="detail-section">' + g.cat + '</div>';
+    g.items.forEach(item => {
+      h += '<div class="detail-ingredient"><span class="detail-ing-name">' + item.name + '</span>';
+      h += '<span class="detail-ing-qty">' + item.qty + '</span></div>';
+    });
+  });
+  h += '<a class="detail-source" href="' + r.url + '" target="_blank">View full recipe on ' + r.site + ' &#8599;</a>';
+  h += '<button class="modal-cancel" onclick="closeRecipeDetail()">Close</button>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function closeRecipeDetail() {
+  const m = document.getElementById('recipe-detail-modal');
+  if (m) m.remove();
 }
 
 function getShoppingList() {
@@ -555,7 +662,6 @@ function getShoppingList() {
 function render() {
   const browseEl = document.getElementById('browse-view');
   const favEl = document.getElementById('favorites-view');
-  const mealsEl = document.getElementById('meals-view');
   const listEl = document.getElementById('list-view');
 
   document.getElementById('browse-count').textContent = RECIPES.length;
@@ -590,22 +696,6 @@ function render() {
     favEl.innerHTML = favHTML;
   }
 
-  // Meals view
-  if (state.selected.length === 0) {
-    mealsEl.innerHTML = '<div class="empty"><div class="icon">&#127869;</div><p>No meals selected yet.<br>Browse and add some meals to get started.</p></div>';
-  } else {
-    const totalServings = state.selected.reduce((sum, id) => {
-      const r = RECIPES.find(r => r.id === id);
-      return sum + (r ? r.servings : 0);
-    }, 0);
-    let html = '<div class="summary-bar" style="margin:-16px -16px 16px;border-radius:0"><div class="count">' + state.selected.length + ' meal' + (state.selected.length!==1?'s':'') + '</div><div class="servings">~' + totalServings + ' servings</div></div>';
-    state.selected.forEach(id => {
-      const r = RECIPES.find(r => r.id === id);
-      if (r) html += renderCard(r, true);
-    });
-    mealsEl.innerHTML = html;
-  }
-
   // Calendar view
   const calEl = document.getElementById('calendar-view');
   const weekDates = getWeekDates(calWeekOffset);
@@ -617,6 +707,26 @@ function render() {
   if (state.selected.length === 0) {
     calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>Add meals from the Browse tab first,<br>then assign them to days here.</p></div>';
   } else {
+    // Unassigned meals inbox — meals selected but not on any day this week
+    const assignedThisWeek = new Set();
+    weekDates.forEach(d => {
+      (state.calendar[dateKey(d)]||[]).forEach(id => assignedThisWeek.add(id));
+    });
+    const unassigned = state.selected.filter(id => !assignedThisWeek.has(id)).map(id => RECIPES.find(r=>r.id===id)).filter(Boolean);
+    if (unassigned.length > 0) {
+      calHTML += '<div class="inbox-section">';
+      calHTML += '<div class="inbox-label">&#128229; Unassigned (' + unassigned.length + ')</div>';
+      unassigned.forEach(r => {
+        calHTML += '<div class="inbox-meal">';
+        calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
+        calHTML += '<div class="inbox-meal-actions">';
+        calHTML += '<button class="inbox-assign-btn" onclick="openInboxAssign(\'' + r.id + '\')">Assign</button>';
+        calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\')" title="Remove meal">&times;</button>';
+        calHTML += '</div></div>';
+      });
+      calHTML += '</div>';
+    }
+
     weekDates.forEach(d => {
       const dk = dateKey(d);
       const today = isToday(d);
@@ -625,7 +735,7 @@ function render() {
       calHTML += '<div class="cal-day-header"><span class="day-name">' + dayName(d) + (today?' · Today':'') + '</span><span class="day-date">' + fmtDate(d) + '</span></div>';
       calHTML += '<div class="cal-day-meals">';
       meals.forEach(r => {
-        calHTML += '<div class="cal-meal"><span class="cal-meal-name">' + r.name + '</span>';
+        calHTML += '<div class="cal-meal"><span class="cal-meal-name" onclick="event.stopPropagation();openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
         calHTML += '<span class="cal-meal-serves">serves ' + r.servings + '</span>';
         calHTML += '<button class="cal-meal-remove" onclick="removeMealFromDay(\'' + dk + '\',\'' + r.id + '\')">&times;</button></div>';
       });
