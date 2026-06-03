@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#f7f6f3;--card:#fff;--text:#1a1a1a;--muted:#6b6b6b;--border:#e5e3de;--accent:#d85a30;--accent-light:#faece7;--accent-text:#712b13;--green:#1d9e75;--green-light:#e1f5ee;--green-text:#085041;--blue:#378add;--blue-light:#e6f1fb;--blue-text:#0c447c;--purple:#7f77dd;--purple-light:#eeedfe;--purple-text:#3c3489;--gold:#ba7517;--gold-light:#faeeda;--gold-text:#633806;--shadow:0 1px 3px rgba(0,0,0,0.06)}
+:root{--bg:#f0f4f0;--card:#fff;--text:#1a2e1a;--muted:#5e6e5e;--border:#d4ddd4;--accent:#3d7a4a;--accent-light:#e2f0e5;--accent-text:#1e4a26;--green:#1d9e75;--green-light:#e1f5ee;--green-text:#085041;--blue:#378add;--blue-light:#e6f1fb;--blue-text:#0c447c;--purple:#7f77dd;--purple-light:#eeedfe;--purple-text:#3c3489;--gold:#8b6d3f;--gold-light:#f5eedd;--gold-text:#5a4020;--shadow:0 1px 3px rgba(0,0,0,0.05)}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
 .header{background:var(--card);border-bottom:1px solid var(--border);padding:16px 20px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:flex-start}
 .header h1{font-size:20px;font-weight:600}
@@ -131,6 +131,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .cards-grid .card{margin-bottom:0}
 }
+.tab-icon{display:none}
+.card{padding:12px 14px}
+.card h3{font-size:15px;cursor:pointer}
+.card h3:active{color:var(--accent)}
+.card .tags{margin-top:4px}
+.progress-ring-wrap{display:flex;align-items:center;gap:16px;margin:8px 0 16px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.progress-ring-info{flex:1}
+.progress-ring-info .pr-count{font-size:15px;font-weight:500;color:var(--text)}
+.progress-ring-info .pr-hint{font-size:12px;color:var(--muted);margin-top:4px}
+@media(max-width:400px){
+  .tab{flex-direction:column;padding:8px 4px;font-size:11px;gap:2px;display:flex;align-items:center;position:relative}
+  .tab-icon{display:block;font-size:18px;line-height:1}
+  .tab .badge{position:absolute;top:2px;right:4px;min-width:14px;height:14px;padding:0 3px;font-size:9px;border-radius:7px}
+}
 </style>
 </head>
 <body>
@@ -144,10 +158,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showView('browse')">Browse<span class="badge" id="browse-count">10</span></button>
-  <button class="tab" onclick="showView('favorites')">Favorites<span class="badge" id="fav-count">0</span></button>
-  <button class="tab" onclick="showView('calendar')">Calendar<span class="badge" id="meals-count">0</span></button>
-  <button class="tab" onclick="showView('list')">Shopping List<span class="badge" id="list-count">0</span></button>
+  <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">10</span></button>
+  <button class="tab" onclick="showView('favorites')"><span class="tab-icon">&#9733;</span>Favs<span class="badge" id="fav-count">0</span></button>
+  <button class="tab" onclick="showView('calendar')"><span class="tab-icon">&#128197;</span>Calendar<span class="badge" id="meals-count">0</span></button>
+  <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
 </div>
 
 <div id="browse-view" class="view active"></div>
@@ -760,8 +774,30 @@ function render() {
     document.getElementById('list-count').textContent = totalItems - checkedItems || totalItems;
 
     const pct = totalItems ? Math.round((checkedItems / totalItems) * 100) : 0;
-    let html = '<div class="progress-text">' + checkedItems + ' of ' + totalItems + ' items checked</div>';
-    html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+    const circ = 2 * Math.PI * 34;
+    const offset = circ - (circ * pct / 100);
+    // Find a contextual hint
+    let hint = '';
+    if (pct === 100) { hint = 'All done!'; }
+    else if (pct === 0) { hint = 'Start checking items off'; }
+    else {
+      const doneCategories = [];
+      shopList.forEach(g => {
+        const allDone = g.items.every(item => item.keys.every(k => state.checked[k]));
+        if (allDone) doneCategories.push(g.cat);
+      });
+      if (doneCategories.length > 0) hint = doneCategories[doneCategories.length-1] + ' section done';
+      else hint = 'Keep going!';
+    }
+    let html = '<div class="progress-ring-wrap">';
+    html += '<svg width="72" height="72" viewBox="0 0 80 80">';
+    html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="6"/>';
+    html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+offset.toFixed(1)+'" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 0.4s"/>';
+    html += '<text x="40" y="37" text-anchor="middle" font-size="18" font-weight="600" fill="var(--text)">' + pct + '%</text>';
+    html += '<text x="40" y="52" text-anchor="middle" font-size="9" fill="var(--muted)">' + checkedItems + '/' + totalItems + '</text>';
+    html += '</svg>';
+    html += '<div class="progress-ring-info"><div class="pr-count">' + checkedItems + ' of ' + totalItems + ' items</div>';
+    html += '<div class="pr-hint">' + hint + '</div></div></div>';
     html += '<div class="list-actions"><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
 
     shopList.forEach(group => {
@@ -797,7 +833,7 @@ function renderCard(r, isSelected) {
   const isFav = state.favorites.includes(r.id);
   let html = '<div class="card">';
   html += '<div class="card-header"><div class="card-title-row"><div>';
-  html += '<h3>' + r.name + '</h3>';
+  html += '<h3 onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</h3>';
   html += '<div class="tags">';
   r.tags.forEach(t => {
     if (t==='dairy-free') html += '<span class="tag tag-df">DF</span>';
@@ -815,9 +851,6 @@ function renderCard(r, isSelected) {
     html += '<button class="btn btn-add btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Add</button>';
   }
   html += '</div></div>';
-  html += '<p class="desc">' + r.desc + '</p>';
-  html += '<a class="source" href="' + r.url + '" target="_blank">View full recipe &#8599;</a>';
-  html += '<span class="source-site">' + r.site + '</span>';
   html += '</div>';
   return html;
 }
