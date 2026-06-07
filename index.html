@@ -509,6 +509,7 @@ function uncheckAll() {
 
 /* ── Calendar ── */
 let calWeekOffset = 0;
+let shopWeekOffset = 0;
 let pickerDate = null;
 
 function getWeekDates(offset) {
@@ -682,11 +683,23 @@ function closeRecipeDetail() {
   if (m) m.remove();
 }
 
-function getShoppingList() {
+function getMealsForWeek(offset) {
+  const dates = getWeekDates(offset);
+  const ids = new Set();
+  dates.forEach(d => {
+    (state.calendar[dateKey(d)]||[]).forEach(id => ids.add(id));
+  });
+  return [...ids];
+}
+
+function changeShopWeek(dir) { shopWeekOffset += dir; render(); }
+
+function getShoppingList(mealIds) {
   const catOrder = ['Meat','Produce','Dairy','Pantry','Spices','Noodles & Pasta'];
   const groups = {};
+  const ids = mealIds || state.selected;
 
-  state.selected.forEach(id => {
+  ids.forEach(id => {
     const r = getAllRecipes().find(r => r.id === id);
     if (!r) return;
     r.ingredients.forEach(g => {
@@ -819,10 +832,21 @@ function render() {
   }
   calEl.innerHTML = calHTML;
 
-  // Shopping list view
-  const shopList = getShoppingList();
-  if (state.selected.length === 0) {
-    listEl.innerHTML = '<div class="empty"><div class="icon">&#128722;</div><p>Add meals to generate<br>your shopping list.</p></div>';
+  // Shopping list view — filtered by week
+  const shopDates = getWeekDates(shopWeekOffset);
+  const shopMealIds = getMealsForWeek(shopWeekOffset);
+  const shopList = getShoppingList(shopMealIds);
+  const shopWeekLabel = fmtDate(shopDates[0]) + ' — ' + fmtDate(shopDates[6]);
+  const shopIsThisWeek = shopWeekOffset === 0;
+
+  let shopHeader = '<div class="cal-header">';
+  shopHeader += '<button class="cal-nav-btn" onclick="changeShopWeek(-1)">&larr;</button>';
+  shopHeader += '<h2>' + shopWeekLabel + (shopIsThisWeek ? ' · This week' : '') + '</h2>';
+  shopHeader += '<button class="cal-nav-btn" onclick="changeShopWeek(1)">&rarr;</button>';
+  shopHeader += '</div>';
+
+  if (shopMealIds.length === 0) {
+    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Assign meals in the Calendar tab first.</p></div>';
     document.getElementById('list-count').textContent = '0';
   } else {
     let totalItems = 0;
@@ -849,7 +873,8 @@ function render() {
       if (doneCategories.length > 0) hint = doneCategories[doneCategories.length-1] + ' section done';
       else hint = 'Keep going!';
     }
-    let html = '<div class="progress-ring-wrap">';
+    let html = shopHeader;
+    html += '<div class="progress-ring-wrap">';
     html += '<svg width="72" height="72" viewBox="0 0 80 80">';
     html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="6"/>';
     html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+offset.toFixed(1)+'" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 0.4s"/>';
@@ -1246,7 +1271,8 @@ function confirmImport(recipe) {
 
 /* ── Copy shopping list (name-first for DoorDash/Instacart) ── */
 function copyShoppingList() {
-  const shopList = getShoppingList();
+  const shopMealIds = getMealsForWeek(shopWeekOffset);
+  const shopList = getShoppingList(shopMealIds);
   let lines = [];
   shopList.forEach(group => {
     group.items.forEach(item => {
