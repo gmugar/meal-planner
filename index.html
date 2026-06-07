@@ -179,6 +179,45 @@ let saving = false;
 
 const RECIPES = [
   {
+    id:"beef-cabbage-stir-fry",name:"Beef & Cabbage Stir Fry",site:"Budget Bytes",
+    url:"https://www.budgetbytes.com/beef-cabbage-stir-fry/",
+    desc:"A fast, takeout-style skillet of ground beef, shredded cabbage, and carrots in a sweet-spicy sesame-sriracha sauce. Ready in 30 minutes.",
+    tags:["one-pan","dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Lean ground beef",qty:"½ lb"}]},
+      {cat:"Produce",items:[{name:"Green cabbage",qty:"½ head"},{name:"Carrots",qty:"2"},{name:"Green onions",qty:"3"},{name:"Garlic, minced",qty:"2 cloves"},{name:"Fresh ginger, grated",qty:"1 tbsp"}]},
+      {cat:"Pantry",items:[{name:"Neutral cooking oil",qty:"½ tbsp"},{name:"Soy sauce",qty:"2 tbsp"},{name:"Toasted sesame oil",qty:"1 tbsp"},{name:"Sriracha",qty:"1 tbsp"},{name:"Brown sugar",qty:"½ tbsp"},{name:"Sesame seeds",qty:"1 tbsp"}]},
+      {cat:"Spices",items:[{name:"Salt and pepper",qty:"to taste"}]}
+    ]
+  },
+  {
+    id:"mexican-beef-rice",name:"Skillet Mexican Beef & Rice",site:"Half Baked Harvest",
+    url:"https://www.halfbakedharvest.com/skillet-mexican-beef-and-rice/",
+    desc:"Taco-seasoned ground beef simmered with rice, salsa, corn, and black beans, then topped with melty cheese and baked until bubbly. A one-skillet weeknight winner.",
+    tags:["one-pan"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Yellow onion, chopped",qty:"1"},{name:"Bell pepper, chopped",qty:"1"},{name:"Corn (fresh or frozen)",qty:"2 cups"},{name:"Spinach (optional)",qty:"2 cups"}]},
+      {cat:"Dairy",items:[{name:"Mexican cheese blend, shredded",qty:"1½ cups"}]},
+      {cat:"Pantry",items:[{name:"Long grain rice",qty:"¾ cup"},{name:"Chunky red salsa",qty:"2 cups"},{name:"Black beans, drained",qty:"1 can (14 oz)"}]},
+      {cat:"Spices",items:[{name:"Taco seasoning",qty:"¼ cup"}]}
+    ]
+  },
+  {
+    id:"greek-meatballs-lemon-rice",name:"Greek Meatballs & Lemon Rice",site:"Half Baked Harvest",
+    url:"https://www.halfbakedharvest.com/one-skillet-greek-meatballs/",
+    desc:"Herby pan-seared meatballs cooked together with buttery lemon orzo-and-rice pilaf, finished with tahini and tzatziki. A bright Greek-inspired one-skillet dinner.",
+    tags:["one-pan"],servings:6,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef or lamb",qty:"1½ lb"}]},
+      {cat:"Produce",items:[{name:"Shallot, chopped",qty:"1"},{name:"Garlic, chopped",qty:"4 cloves"},{name:"Fresh basil leaves",qty:"½ cup"},{name:"Fresh dill, chopped",qty:"¼ cup"},{name:"Lemon juice",qty:"⅓ cup"}]},
+      {cat:"Dairy",items:[{name:"Egg",qty:"1"},{name:"Salted butter",qty:"4 tbsp"}]},
+      {cat:"Pantry",items:[{name:"Panko bread crumbs",qty:"½ cup"},{name:"Rice (jasmine or basmati)",qty:"1 cup"},{name:"Tahini (for serving)",qty:"to taste"},{name:"Tzatziki (for serving)",qty:"to taste"},{name:"Sesame seeds",qty:"1 tbsp"}]},
+      {cat:"Spices",items:[{name:"Smoked paprika",qty:"1 tsp"},{name:"Cumin",qty:"1 tsp"},{name:"Chipotle chili powder",qty:"½ tsp"},{name:"Salt and black pepper",qty:"to taste"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Dry orzo",qty:"½ cup"}]}
+    ]
+  },
+  {
     id:"ramen",name:"One-Pan Beef Ramen Noodles",site:"Simple Home Edit",
     url:"https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
     desc:"Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",
