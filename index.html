@@ -182,6 +182,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .week-option-label{font-size:14px;font-weight:500}
 .week-option-dates{font-size:12px;color:var(--muted);margin-top:2px}
 .week-option-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
+/* Import recipe */
+.import-input{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:12px;background:var(--bg);color:var(--text)}
+.import-input:focus{outline:none;border-color:var(--accent)}
+.import-status{font-size:13px;color:var(--muted);margin-bottom:12px;min-height:20px}
+.import-status.error{color:#c0392b}
+.import-preview{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;background:var(--bg)}
+.import-preview h4{font-size:15px;font-weight:600;margin-bottom:4px}
+.import-preview .ip-meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+.import-preview .ip-section{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-top:10px;margin-bottom:4px}
+.import-preview .ip-item{font-size:13px;padding:2px 0;color:var(--text)}
+.import-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn-import{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer}
+.btn-import:active{opacity:0.85}
+.btn-import:disabled{opacity:0.4;cursor:default}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -192,6 +208,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <p>Simple Home Edit &middot; Budget Bytes &middot; Half Baked Harvest</p>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
+    <button class="plan-go" onclick="openImportModal()" style="padding:6px 12px;font-size:12px">+ Add Recipe</button>
     <button class="plan-go" onclick="openWeekPicker()" style="padding:6px 12px;font-size:12px">+ New Plan</button>
     <div class="sync-badge connecting" id="sync-status">connecting...</div>
   </div>
@@ -351,16 +368,18 @@ const RECIPES = [
 ];
 
 /* ── State management with Supabase sync ── */
-let state = { selected: [], checked: {}, favorites: [], calendar: {} };
+let state = { selected: [], checked: {}, favorites: [], calendar: {}, customRecipes: [] };
 
 // Load from localStorage first for instant render
 const cached = localStorage.getItem('mealPlannerState');
 if (cached) {
   try {
     const parsed = JSON.parse(cached);
-    state = { selected: parsed.selected || [], checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {} };
+    state = { selected: parsed.selected || [], checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {}, customRecipes: parsed.customRecipes || [] };
   } catch(e) {}
 }
+
+function getAllRecipes() { return [...RECIPES, ...state.customRecipes]; }
 
 function setSyncStatus(status) {
   const el = document.getElementById('sync-status');
@@ -543,8 +562,8 @@ function renderPicker() {
   const dayMeals = state.calendar[pickerDate] || [];
   const d = new Date(pickerDate + 'T12:00:00');
   // Show approved meals first, then unapproved
-  const approvedRecipes = RECIPES.filter(r => state.selected.includes(r.id));
-  const otherRecipes = RECIPES.filter(r => !state.selected.includes(r.id));
+  const approvedRecipes = getAllRecipes().filter(r => state.selected.includes(r.id));
+  const otherRecipes = getAllRecipes().filter(r => !state.selected.includes(r.id));
   let h = '<div class="modal-overlay" id="meal-picker-modal" onclick="if(event.target===this)closePicker()">';
   h += '<div class="modal">';
   h += '<h3>Add meal to ' + dayName(d) + '</h3>';
@@ -597,7 +616,7 @@ function removeMealFromDay(dateStr, mealId) {
 }
 
 function openInboxAssign(mealId) {
-  const r = RECIPES.find(r => r.id === mealId);
+  const r = getAllRecipes().find(r => r.id === mealId);
   if (!r) return;
   const old = document.getElementById('inbox-assign-modal');
   if (old) old.remove();
@@ -627,7 +646,7 @@ function closeInboxAssign() {
 }
 
 function openRecipeDetail(mealId) {
-  const r = RECIPES.find(r => r.id === mealId);
+  const r = getAllRecipes().find(r => r.id === mealId);
   if (!r) return;
   const old = document.getElementById('recipe-detail-modal');
   if (old) old.remove();
@@ -668,7 +687,7 @@ function getShoppingList() {
   const groups = {};
 
   state.selected.forEach(id => {
-    const r = RECIPES.find(r => r.id === id);
+    const r = getAllRecipes().find(r => r.id === id);
     if (!r) return;
     r.ingredients.forEach(g => {
       if (!groups[g.cat]) groups[g.cat] = [];
@@ -719,13 +738,13 @@ function render() {
   const favEl = document.getElementById('favorites-view');
   const listEl = document.getElementById('list-view');
 
-  document.getElementById('browse-count').textContent = RECIPES.length;
+  document.getElementById('browse-count').textContent = getAllRecipes().length;
   document.getElementById('meals-count').textContent = state.selected.length;
   document.getElementById('fav-count').textContent = state.favorites.length;
 
   // Browse view
-  const approved = RECIPES.filter(r => state.selected.includes(r.id));
-  const available = RECIPES.filter(r => !state.selected.includes(r.id));
+  const approved = getAllRecipes().filter(r => state.selected.includes(r.id));
+  const available = getAllRecipes().filter(r => !state.selected.includes(r.id));
 
   let browseHTML = '';
   if (approved.length > 0) {
@@ -739,7 +758,7 @@ function render() {
   browseEl.innerHTML = browseHTML;
 
   // Favorites view
-  const favRecipes = RECIPES.filter(r => state.favorites.includes(r.id));
+  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
   if (favRecipes.length === 0) {
     favEl.innerHTML = '<div class="empty"><div class="icon">&#11088;</div><p>No favorites yet.<br>Star recipes you love to save them here.</p></div>';
   } else {
@@ -767,7 +786,7 @@ function render() {
     weekDates.forEach(d => {
       (state.calendar[dateKey(d)]||[]).forEach(id => assignedThisWeek.add(id));
     });
-    const unassigned = state.selected.filter(id => !assignedThisWeek.has(id)).map(id => RECIPES.find(r=>r.id===id)).filter(Boolean);
+    const unassigned = state.selected.filter(id => !assignedThisWeek.has(id)).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
     if (unassigned.length > 0) {
       calHTML += '<div class="inbox-section">';
       calHTML += '<div class="inbox-label">&#128229; Unassigned (' + unassigned.length + ')</div>';
@@ -785,7 +804,7 @@ function render() {
     weekDates.forEach(d => {
       const dk = dateKey(d);
       const today = isToday(d);
-      const meals = (state.calendar[dk]||[]).map(id => RECIPES.find(r=>r.id===id)).filter(Boolean);
+      const meals = (state.calendar[dk]||[]).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
       calHTML += '<div class="cal-day' + (today?' today':'') + '">';
       calHTML += '<div class="cal-day-header"><span class="day-name">' + dayName(d) + (today?' · Today':'') + '</span><span class="day-date">' + fmtDate(d) + '</span></div>';
       calHTML += '<div class="cal-day-meals">';
@@ -982,8 +1001,8 @@ function renderWizard() {
   h += '<p class="wizard-hint">Tap recipes to add them to your plan. You\'ll assign them to specific days next.</p>';
 
   // Show favorites first if any
-  const favRecipes = RECIPES.filter(r => state.favorites.includes(r.id));
-  const otherRecipes = RECIPES.filter(r => !state.favorites.includes(r.id));
+  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
+  const otherRecipes = getAllRecipes().filter(r => !state.favorites.includes(r.id));
   const ordered = [...favRecipes, ...otherRecipes];
 
   if (favRecipes.length > 0) {
@@ -1041,6 +1060,176 @@ function wizardContinue() {
   // Navigate to the chosen week in calendar
   calWeekOffset = wizardWeekOffset;
   showView('calendar');
+}
+
+/* ── Recipe import from URL ── */
+function openImportModal() {
+  const old = document.getElementById('import-modal');
+  if (old) old.remove();
+  let h = '<div class="modal-overlay" id="import-modal" onclick="if(event.target===this)closeImportModal()">';
+  h += '<div class="modal" style="max-height:85vh">';
+  h += '<h3>Add Recipe from URL</h3>';
+  h += '<p class="modal-sub">Paste a recipe URL and we\'ll extract the ingredients</p>';
+  h += '<input class="import-input" id="import-url" type="url" placeholder="https://example.com/recipe/..." autofocus>';
+  h += '<div class="import-status" id="import-status"></div>';
+  h += '<div id="import-preview-area"></div>';
+  h += '<div class="import-actions">';
+  h += '<button class="modal-cancel" onclick="closeImportModal()" style="width:auto;margin:0">Cancel</button>';
+  h += '<button class="btn-import" id="import-btn" onclick="doImport()">Import Recipe</button>';
+  h += '</div>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+  document.getElementById('import-url').addEventListener('keydown', e => { if (e.key==='Enter') doImport(); });
+}
+
+function closeImportModal() {
+  const m = document.getElementById('import-modal');
+  if (m) m.remove();
+}
+
+async function doImport() {
+  const urlInput = document.getElementById('import-url');
+  const statusEl = document.getElementById('import-status');
+  const previewEl = document.getElementById('import-preview-area');
+  const btn = document.getElementById('import-btn');
+  const url = urlInput.value.trim();
+  if (!url) { statusEl.className='import-status error'; statusEl.textContent='Please enter a URL'; return; }
+
+  btn.disabled = true;
+  statusEl.className='import-status';
+  statusEl.innerHTML='<span class="spinner"></span>Fetching recipe...';
+  previewEl.innerHTML='';
+
+  try {
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('Could not fetch page');
+    const data = await res.json();
+    const html = data.contents;
+    if (!html) throw new Error('Empty response');
+
+    const recipe = parseRecipeFromHtml(html, url);
+    if (!recipe) throw new Error('No recipe data found on this page. Try a recipe page with structured data.');
+
+    statusEl.innerHTML='&#10003; Recipe found!';
+    statusEl.className='import-status';
+    showImportPreview(recipe, previewEl);
+    btn.textContent='Add to Meal Planner';
+    btn.disabled=false;
+    btn.onclick = function() { confirmImport(recipe); };
+  } catch(e) {
+    statusEl.className='import-status error';
+    statusEl.textContent='Error: ' + e.message;
+    btn.disabled=false;
+    btn.textContent='Import Recipe';
+    btn.onclick=doImport;
+  }
+}
+
+function parseRecipeFromHtml(html, url) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Try JSON-LD structured data first
+  const ldScripts = doc.querySelectorAll('script[type="application/ld+json"]');
+  for (const script of ldScripts) {
+    try {
+      let jsonData = JSON.parse(script.textContent);
+      // Handle @graph arrays
+      if (jsonData['@graph']) jsonData = jsonData['@graph'];
+      if (Array.isArray(jsonData)) {
+        const found = jsonData.find(item => item['@type'] === 'Recipe' || (Array.isArray(item['@type']) && item['@type'].includes('Recipe')));
+        if (found) jsonData = found;
+        else continue;
+      }
+      if (jsonData['@type'] === 'Recipe' || (Array.isArray(jsonData['@type']) && jsonData['@type'].includes('Recipe'))) {
+        return buildRecipeFromLD(jsonData, url);
+      }
+    } catch(e) { continue; }
+  }
+
+  // Fallback: try meta tags
+  const title = doc.querySelector('meta[property="og:title"]')?.content || doc.querySelector('title')?.textContent || '';
+  if (!title) return null;
+
+  return {
+    id: 'custom_' + Date.now(),
+    name: title.split('|')[0].split('-')[0].trim(),
+    site: new URL(url).hostname.replace('www.',''),
+    url: url,
+    desc: doc.querySelector('meta[property="og:description"]')?.content || doc.querySelector('meta[name="description"]')?.content || '',
+    tags: [],
+    servings: 4,
+    ingredients: [{cat:'Ingredients', items:[{name:'(imported — edit ingredients manually)', qty:''}]}],
+    custom: true
+  };
+}
+
+function buildRecipeFromLD(ld, url) {
+  const name = ld.name || 'Unnamed Recipe';
+  const desc = ld.description || '';
+  const servings = parseInt(ld.recipeYield) || (Array.isArray(ld.recipeYield) ? parseInt(ld.recipeYield[0]) : 4) || 4;
+  const site = new URL(url).hostname.replace('www.','');
+
+  // Parse ingredients
+  const rawIngredients = ld.recipeIngredient || ld.ingredients || [];
+  const items = rawIngredients.map(ing => {
+    ing = ing.replace(/<[^>]*>/g, '').trim();
+    // Try to split qty from name: match leading numbers/fractions/units
+    const match = ing.match(/^([\d¼½¾⅓⅔⅛\s\/\.\-]+(?:\s*(?:cup|cups|tbsp|tsp|oz|lb|lbs|pound|pounds|g|kg|ml|L|clove|cloves|can|cans|bunch|head|large|medium|small|pinch|dash|to taste|tablespoon|tablespoons|teaspoon|teaspoons|ounce|ounces|slice|slices|piece|pieces)s?)?)\s+(.+)/i);
+    if (match) return { name: match[2].trim(), qty: match[1].trim() };
+    return { name: ing, qty: '' };
+  });
+
+  // Detect tags
+  const tags = [];
+  const cats = (ld.recipeCategory || []);
+  const cuisines = (ld.recipeCuisine || []);
+  const keywords = (ld.keywords || '');
+  const allText = [name, desc, ...cats, ...cuisines, keywords].join(' ').toLowerCase();
+  if (allText.includes('dairy-free') || allText.includes('dairy free')) tags.push('dairy-free');
+  if (allText.includes('gluten-free') || allText.includes('gluten free')) tags.push('gluten-free');
+  if (allText.includes('one-pan') || allText.includes('one pan') || allText.includes('sheet pan')) tags.push('one-pan');
+  if (allText.includes('one-pot') || allText.includes('one pot')) tags.push('one-pot');
+
+  return {
+    id: 'custom_' + Date.now(),
+    name: name,
+    site: site,
+    url: url,
+    desc: desc.substring(0, 200),
+    tags: tags,
+    servings: servings,
+    ingredients: [{ cat: 'Ingredients', items: items }],
+    custom: true
+  };
+}
+
+function showImportPreview(recipe, container) {
+  let h = '<div class="import-preview">';
+  h += '<h4>' + recipe.name + '</h4>';
+  h += '<div class="ip-meta">' + recipe.site + ' &middot; serves ' + recipe.servings + '</div>';
+  if (recipe.desc) h += '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">' + recipe.desc + '</div>';
+  h += '<div class="ip-section">Ingredients (' + recipe.ingredients[0].items.length + ')</div>';
+  recipe.ingredients[0].items.slice(0, 15).forEach(item => {
+    h += '<div class="ip-item">' + (item.qty ? '<span style="color:var(--muted)">' + item.qty + '</span> ' : '') + item.name + '</div>';
+  });
+  if (recipe.ingredients[0].items.length > 15) h += '<div class="ip-item" style="color:var(--muted)">+ ' + (recipe.ingredients[0].items.length - 15) + ' more...</div>';
+  h += '</div>';
+  container.innerHTML = h;
+}
+
+function confirmImport(recipe) {
+  // Check for duplicate
+  if (state.customRecipes.some(r => r.url === recipe.url)) {
+    alert('This recipe has already been imported.');
+    closeImportModal();
+    return;
+  }
+  state.customRecipes.push(recipe);
+  save();
+  closeImportModal();
+  render();
 }
 
 checkSaturdayNotification();
