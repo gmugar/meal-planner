@@ -145,6 +145,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .tab-icon{display:block;font-size:18px;line-height:1}
   .tab .badge{position:absolute;top:2px;right:4px;min-width:14px;height:14px;padding:0 3px;font-size:9px;border-radius:7px}
 }
+/* Saturday planning notification */
+.plan-notify{background:var(--accent-light);border:1px solid var(--accent);border-radius:12px;margin:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);animation:slideDown 0.3s ease}
+@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.plan-notify .plan-icon{font-size:28px;flex-shrink:0}
+.plan-notify .plan-text{flex:1}
+.plan-notify .plan-title{font-size:15px;font-weight:600;color:var(--accent-text)}
+.plan-notify .plan-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.plan-notify .plan-actions{display:flex;gap:8px;flex-shrink:0}
+.plan-go{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer}
+.plan-go:active{opacity:0.85}
+.plan-later{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer}
+/* Planning wizard */
+.wizard-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:300;overflow-y:auto;animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.wizard-header{padding:16px 20px;background:var(--card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:301}
+.wizard-header h2{font-size:18px;font-weight:600}
+.wizard-close{background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1}
+.wizard-body{padding:16px;max-width:600px;margin:0 auto}
+.wizard-step{font-size:12px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.wizard-hint{font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.wizard-recipe{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);cursor:pointer;transition:all 0.15s}
+.wizard-recipe:active{transform:scale(0.98)}
+.wizard-recipe.picked{border-color:var(--accent);background:var(--accent-light)}
+.wizard-recipe-info{flex:1;min-width:0}
+.wizard-recipe-name{font-size:14px;font-weight:500}
+.wizard-recipe-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.wizard-check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:transparent;transition:all 0.15s}
+.wizard-recipe.picked .wizard-check{border-color:var(--accent);background:var(--accent);color:#fff}
+.wizard-footer{padding:16px 20px;background:var(--card);border-top:1px solid var(--border);position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center}
+.wizard-footer .btn{min-width:120px;text-align:center}
+.wizard-count{font-size:14px;color:var(--muted)}
+.week-option{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);cursor:pointer;transition:all 0.15s}
+.week-option:active{background:var(--accent-light);border-color:var(--accent)}
+.week-option-info{flex:1}
+.week-option-label{font-size:14px;font-weight:500}
+.week-option-dates{font-size:12px;color:var(--muted);margin-top:2px}
+.week-option-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -154,8 +191,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <h1>Meal Planner</h1>
     <p>Simple Home Edit &middot; Budget Bytes &middot; Half Baked Harvest</p>
   </div>
-  <div class="sync-badge connecting" id="sync-status">connecting...</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="plan-go" onclick="openWeekPicker()" style="padding:6px 12px;font-size:12px">+ New Plan</button>
+    <div class="sync-badge connecting" id="sync-status">connecting...</div>
+  </div>
 </div>
+<div id="plan-notification"></div>
 
 <div class="tabs">
   <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">10</span></button>
@@ -178,45 +219,6 @@ let syncConnected = false;
 let saving = false;
 
 const RECIPES = [
-  {
-    id:"beef-cabbage-stir-fry",name:"Beef & Cabbage Stir Fry",site:"Budget Bytes",
-    url:"https://www.budgetbytes.com/beef-cabbage-stir-fry/",
-    desc:"A fast, takeout-style skillet of ground beef, shredded cabbage, and carrots in a sweet-spicy sesame-sriracha sauce. Ready in 30 minutes.",
-    tags:["one-pan","dairy-free","fakeaway"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Lean ground beef",qty:"½ lb"}]},
-      {cat:"Produce",items:[{name:"Green cabbage",qty:"½ head"},{name:"Carrots",qty:"2"},{name:"Green onions",qty:"3"},{name:"Garlic, minced",qty:"2 cloves"},{name:"Fresh ginger, grated",qty:"1 tbsp"}]},
-      {cat:"Pantry",items:[{name:"Neutral cooking oil",qty:"½ tbsp"},{name:"Soy sauce",qty:"2 tbsp"},{name:"Toasted sesame oil",qty:"1 tbsp"},{name:"Sriracha",qty:"1 tbsp"},{name:"Brown sugar",qty:"½ tbsp"},{name:"Sesame seeds",qty:"1 tbsp"}]},
-      {cat:"Spices",items:[{name:"Salt and pepper",qty:"to taste"}]}
-    ]
-  },
-  {
-    id:"mexican-beef-rice",name:"Skillet Mexican Beef & Rice",site:"Half Baked Harvest",
-    url:"https://www.halfbakedharvest.com/skillet-mexican-beef-and-rice/",
-    desc:"Taco-seasoned ground beef simmered with rice, salsa, corn, and black beans, then topped with melty cheese and baked until bubbly. A one-skillet weeknight winner.",
-    tags:["one-pan"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Yellow onion, chopped",qty:"1"},{name:"Bell pepper, chopped",qty:"1"},{name:"Corn (fresh or frozen)",qty:"2 cups"},{name:"Spinach (optional)",qty:"2 cups"}]},
-      {cat:"Dairy",items:[{name:"Mexican cheese blend, shredded",qty:"1½ cups"}]},
-      {cat:"Pantry",items:[{name:"Long grain rice",qty:"¾ cup"},{name:"Chunky red salsa",qty:"2 cups"},{name:"Black beans, drained",qty:"1 can (14 oz)"}]},
-      {cat:"Spices",items:[{name:"Taco seasoning",qty:"¼ cup"}]}
-    ]
-  },
-  {
-    id:"greek-meatballs-lemon-rice",name:"Greek Meatballs & Lemon Rice",site:"Half Baked Harvest",
-    url:"https://www.halfbakedharvest.com/one-skillet-greek-meatballs/",
-    desc:"Herby pan-seared meatballs cooked together with buttery lemon orzo-and-rice pilaf, finished with tahini and tzatziki. A bright Greek-inspired one-skillet dinner.",
-    tags:["one-pan"],servings:6,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef or lamb",qty:"1½ lb"}]},
-      {cat:"Produce",items:[{name:"Shallot, chopped",qty:"1"},{name:"Garlic, chopped",qty:"4 cloves"},{name:"Fresh basil leaves",qty:"½ cup"},{name:"Fresh dill, chopped",qty:"¼ cup"},{name:"Lemon juice",qty:"⅓ cup"}]},
-      {cat:"Dairy",items:[{name:"Egg",qty:"1"},{name:"Salted butter",qty:"4 tbsp"}]},
-      {cat:"Pantry",items:[{name:"Panko bread crumbs",qty:"½ cup"},{name:"Rice (jasmine or basmati)",qty:"1 cup"},{name:"Tahini (for serving)",qty:"to taste"},{name:"Tzatziki (for serving)",qty:"to taste"},{name:"Sesame seeds",qty:"1 tbsp"}]},
-      {cat:"Spices",items:[{name:"Smoked paprika",qty:"1 tsp"},{name:"Cumin",qty:"1 tsp"},{name:"Chipotle chili powder",qty:"½ tsp"},{name:"Salt and black pepper",qty:"to taste"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Dry orzo",qty:"½ cup"}]}
-    ]
-  },
   {
     id:"ramen",name:"One-Pan Beef Ramen Noodles",site:"Simple Home Edit",
     url:"https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
@@ -894,6 +896,154 @@ function renderCard(r, isSelected) {
   return html;
 }
 
+/* ── Weekly planning wizard ── */
+let wizardWeekOffset = 1;
+let wizardPicked = [];
+
+function getWeekKey(d) {
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
+  return mon.toISOString().split('T')[0];
+}
+
+// Saturday notification
+function checkSaturdayNotification() {
+  const now = new Date();
+  if (now.getDay() !== 6) return;
+  const wk = 'planDismissed_' + getWeekKey(now);
+  if (localStorage.getItem(wk)) return;
+  const el = document.getElementById('plan-notification');
+  el.innerHTML = '<div class="plan-notify">' +
+    '<div class="plan-icon">&#128203;</div>' +
+    '<div class="plan-text"><div class="plan-title">Ready to plan next week?</div>' +
+    '<div class="plan-sub">Pick recipes and assign them to days</div></div>' +
+    '<div class="plan-actions">' +
+    '<button class="plan-go" onclick="dismissPlanNotify();openWeekPicker()">Let\'s plan</button>' +
+    '<button class="plan-later" onclick="dismissPlanNotify()">Later</button>' +
+    '</div></div>';
+}
+
+function dismissPlanNotify() {
+  const wk = 'planDismissed_' + getWeekKey(new Date());
+  localStorage.setItem(wk, '1');
+  document.getElementById('plan-notification').innerHTML = '';
+}
+
+// Week picker modal
+function openWeekPicker() {
+  const old = document.getElementById('week-picker-modal');
+  if (old) old.remove();
+  let h = '<div class="modal-overlay" id="week-picker-modal" onclick="if(event.target===this)closeWeekPicker()">';
+  h += '<div class="modal">';
+  h += '<h3>Plan which week?</h3>';
+  h += '<p class="modal-sub">Choose the week you want to plan meals for</p>';
+  for (let i = 0; i <= 2; i++) {
+    const dates = getWeekDates(i);
+    const mon = dates[0]; const sun = dates[6];
+    const label = i === 0 ? 'This week' : i === 1 ? 'Next week' : 'In 2 weeks';
+    const existingMeals = dates.reduce((c,d) => c + (state.calendar[dateKey(d)]||[]).length, 0);
+    h += '<div class="week-option" onclick="selectWeekAndPlan('+i+')">';
+    h += '<div class="week-option-info"><div class="week-option-label">' + label + '</div>';
+    h += '<div class="week-option-dates">' + fmtDate(mon) + ' — ' + fmtDate(sun);
+    if (existingMeals > 0) h += ' · ' + existingMeals + ' meal' + (existingMeals!==1?'s':'') + ' planned';
+    h += '</div></div>';
+    h += '<span class="week-option-arrow">&#8250;</span>';
+    h += '</div>';
+  }
+  h += '<button class="modal-cancel" onclick="closeWeekPicker()">Cancel</button>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function closeWeekPicker() {
+  const m = document.getElementById('week-picker-modal');
+  if (m) m.remove();
+}
+
+function selectWeekAndPlan(offset) {
+  wizardWeekOffset = offset;
+  wizardPicked = [...state.selected];
+  closeWeekPicker();
+  renderWizard();
+}
+
+// Planning wizard
+function renderWizard() {
+  const old = document.getElementById('planning-wizard');
+  if (old) old.remove();
+  const dates = getWeekDates(wizardWeekOffset);
+  const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
+
+  let h = '<div class="wizard-overlay" id="planning-wizard">';
+  h += '<div class="wizard-header"><h2>Plan: ' + weekLabel + '</h2>';
+  h += '<button class="wizard-close" onclick="closeWizard()">&times;</button></div>';
+  h += '<div class="wizard-body">';
+  h += '<div class="wizard-step">Step 1 of 2 &middot; Choose Recipes</div>';
+  h += '<p class="wizard-hint">Tap recipes to add them to your plan. You\'ll assign them to specific days next.</p>';
+
+  // Show favorites first if any
+  const favRecipes = RECIPES.filter(r => state.favorites.includes(r.id));
+  const otherRecipes = RECIPES.filter(r => !state.favorites.includes(r.id));
+  const ordered = [...favRecipes, ...otherRecipes];
+
+  if (favRecipes.length > 0) {
+    h += '<div class="section-label" style="padding-top:8px">&#9733; Favorites</div>';
+  }
+
+  ordered.forEach((r, idx) => {
+    if (favRecipes.length > 0 && idx === favRecipes.length) {
+      h += '<div class="section-label" style="padding-top:8px">All Recipes</div>';
+    }
+    const isPicked = wizardPicked.includes(r.id);
+    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
+    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + r.name + '</div>';
+    h += '<div class="wizard-recipe-meta">';
+    r.tags.forEach(t => { h += t + ' · '; });
+    h += 'serves ' + r.servings + '</div></div>';
+    h += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
+    h += '</div>';
+  });
+
+  h += '</div>';
+  h += '<div class="wizard-footer">';
+  h += '<div class="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' selected</div>';
+  if (wizardPicked.length > 0) {
+    h += '<button class="btn btn-add" onclick="wizardContinue()">Assign to days &#8250;</button>';
+  } else {
+    h += '<button class="btn btn-add" style="opacity:0.4;cursor:default">Assign to days &#8250;</button>';
+  }
+  h += '</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function toggleWizardPick(id) {
+  const idx = wizardPicked.indexOf(id);
+  if (idx === -1) wizardPicked.push(id);
+  else wizardPicked.splice(idx, 1);
+  renderWizard();
+}
+
+function closeWizard() {
+  const el = document.getElementById('planning-wizard');
+  if (el) el.remove();
+}
+
+function wizardContinue() {
+  if (wizardPicked.length === 0) return;
+  // Merge wizard picks into state.selected (add any new ones)
+  wizardPicked.forEach(id => {
+    if (!state.selected.includes(id)) state.selected.push(id);
+  });
+  save();
+  closeWizard();
+
+  // Navigate to the chosen week in calendar
+  calWeekOffset = wizardWeekOffset;
+  showView('calendar');
+}
+
+checkSaturdayNotification();
 render();
 </script>
 </body>
