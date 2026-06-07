@@ -1101,12 +1101,24 @@ async function doImport() {
   previewEl.innerHTML='';
 
   try {
-    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('Could not fetch page');
-    const data = await res.json();
-    const html = data.contents;
-    if (!html) throw new Error('Empty response');
+    // Try multiple CORS proxies
+    const proxies = [
+      { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(url), json: true, field: 'contents' },
+      { url: 'https://corsproxy.io/?' + encodeURIComponent(url), json: false },
+      { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), json: false }
+    ];
+    let html = null;
+    for (const proxy of proxies) {
+      try {
+        const res = await fetch(proxy.url);
+        if (!res.ok) continue;
+        if (proxy.json) { const d = await res.json(); html = d[proxy.field]; }
+        else { html = await res.text(); }
+        if (html && html.length > 500) break;
+        html = null;
+      } catch(e) { continue; }
+    }
+    if (!html) throw new Error('Could not fetch page. The site may be blocking access.');
 
     const recipe = parseRecipeFromHtml(html, url);
     if (!recipe) throw new Error('No recipe data found on this page. Try a recipe page with structured data.');
