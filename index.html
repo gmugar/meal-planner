@@ -858,7 +858,7 @@ function render() {
     html += '</svg>';
     html += '<div class="progress-ring-info"><div class="pr-count">' + checkedItems + ' of ' + totalItems + ' items</div>';
     html += '<div class="pr-hint">' + hint + '</div></div></div>';
-    html += '<div class="list-actions"><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
+    html += '<div class="list-actions"><button class="btn-outline" onclick="copyShoppingList()">&#128203; Copy list</button><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
 
     shopList.forEach(group => {
       html += '<div class="section-label">' + group.cat + '</div>';
@@ -1242,6 +1242,38 @@ function confirmImport(recipe) {
   save();
   closeImportModal();
   render();
+}
+
+/* ── Copy shopping list (name-first for DoorDash/Instacart) ── */
+function copyShoppingList() {
+  const shopList = getShoppingList();
+  let lines = [];
+  shopList.forEach(group => {
+    group.items.forEach(item => {
+      const isChecked = item.keys.every(k => state.checked[k]);
+      if (isChecked) return; // skip checked items
+      const name = item.name.replace(/,.*$/, '').trim(); // clean trailing qualifiers
+      const qty = item.qty;
+      lines.push(qty ? name + ' (' + qty + ')' : name);
+    });
+  });
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.list-actions button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '&#10003; Copied!';
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.querySelector('.list-actions button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '&#10003; Copied!';
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  });
 }
 
 checkSaturdayNotification();
