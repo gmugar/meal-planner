@@ -396,6 +396,7 @@ async function loadFromSupabase() {
       state.checked = data.checked || {};
       state.favorites = data.favorites || [];
       state.calendar = data.calendar || {};
+      state.customRecipes = data.custom_recipes || [];
       localStorage.setItem('mealPlannerState', JSON.stringify(state));
       render();
     }
@@ -419,6 +420,7 @@ async function saveToSupabase() {
       checked: state.checked,
       favorites: state.favorites,
       calendar: state.calendar,
+      custom_recipes: state.customRecipes,
       updated_at: new Date().toISOString()
     });
     if (error) throw error;
@@ -445,6 +447,7 @@ sb.channel('meal_state_changes')
       state.checked = data.checked || {};
       state.favorites = data.favorites || [];
       state.calendar = data.calendar || {};
+      state.customRecipes = data.custom_recipes || [];
       localStorage.setItem('mealPlannerState', JSON.stringify(state));
       render();
     }
