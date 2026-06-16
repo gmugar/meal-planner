@@ -219,13 +219,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <div class="tabs">
   <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">10</span></button>
-  <button class="tab" onclick="showView('favorites')"><span class="tab-icon">&#9733;</span>Favs<span class="badge" id="fav-count">0</span></button>
   <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
   <button class="tab" onclick="showView('calendar')"><span class="tab-icon">&#128197;</span>Calendar<span class="badge" id="meals-count">0</span></button>
 </div>
 
 <div id="browse-view" class="view active"></div>
-<div id="favorites-view" class="view"></div>
 <div id="calendar-view" class="view"></div>
 <div id="list-view" class="view"></div>
 
@@ -412,16 +410,25 @@ const RECIPES = [
 ];
 
 /* ── State management with Supabase sync ── */
-let state = { selected: [], checked: {}, favorites: [], calendar: {}, customRecipes: [] };
+let state = { selected: {}, checked: {}, favorites: [], calendar: {}, customRecipes: [] };
 
 // Load from localStorage first for instant render
 const cached = localStorage.getItem('mealPlannerState');
 if (cached) {
   try {
     const parsed = JSON.parse(cached);
-    state = { selected: parsed.selected || [], checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {}, customRecipes: parsed.customRecipes || [] };
+    state = { selected: migrateSelected(parsed.selected), checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {}, customRecipes: parsed.customRecipes || [] };
   } catch(e) {}
 }
+
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function weekKeyOfDate(d){ const m=new Date(d); m.setHours(12,0,0,0); m.setDate(m.getDate()-(m.getDay()===0?6:m.getDay()-1)); return ymd(m); }
+function weekKeyForOffset(offset){ return weekKeyOfDate(getWeekDates(offset)[0]); }
+function curWeekKey(){ return weekKeyForOffset(0); }
+function planFor(offset){ return state.selected[weekKeyForOffset(offset)] || []; }
+function migrateSelected(sel){ if(Array.isArray(sel)) return sel.length ? {[curWeekKey()]: sel.slice()} : {}; return (sel && typeof sel==='object') ? sel : {}; }
+function prunePlan(){ const cut=weekKeyForOffset(-8); Object.keys(state.selected).forEach(wk=>{ if(wk<cut) delete state.selected[wk]; }); }
+prunePlan();
 
 function getAllRecipes() { return [...RECIPES, ...state.customRecipes]; }
 function isNewRecipe(r) {
@@ -441,7 +448,7 @@ async function loadFromSupabase() {
     const { data, error } = await sb.from('meal_state').select('*').eq('id', 1).single();
     if (error) throw error;
     if (data) {
-      state.selected = data.selected || [];
+      state.selected = migrateSelected(data.selected); prunePlan();
       state.checked = data.checked || {};
       state.favorites = data.favorites || [];
       state.calendar = data.calendar || {};
@@ -492,7 +499,7 @@ sb.channel('meal_state_changes')
     if (saving) return; // ignore our own writes
     const data = payload.new;
     if (data) {
-      state.selected = data.selected || [];
+      state.selected = migrateSelected(data.selected); prunePlan();
       state.checked = data.checked || {};
       state.favorites = data.favorites || [];
       state.calendar = data.calendar || {};
@@ -516,21 +523,24 @@ loadFromSupabase();
 function showView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const views = ['browse','favorites','list','calendar'];
+  const views = ['browse','list','calendar'];
   document.getElementById(view+'-view').classList.add('active');
   document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
   render();
 }
 
-function toggleMeal(id) {
-  const idx = state.selected.indexOf(id);
+function toggleMeal(id, offset) {
+  const wk = weekKeyForOffset(offset || 0);
+  const arr = state.selected[wk] || (state.selected[wk] = []);
+  const idx = arr.indexOf(id);
   if (idx === -1) {
-    state.selected.push(id);
+    arr.push(id);
   } else {
-    state.selected.splice(idx, 1);
+    arr.splice(idx, 1);
     Object.keys(state.checked).forEach(k => {
       if (k.startsWith(id+'|')) delete state.checked[k];
     });
+    if (arr.length === 0) delete state.selected[wk];
   }
   save();
   render();
@@ -615,8 +625,9 @@ function renderPicker() {
   const dayMeals = state.calendar[pickerDate] || [];
   const d = new Date(pickerDate + 'T12:00:00');
   // Show approved meals first, then unapproved
-  const approvedRecipes = getAllRecipes().filter(r => state.selected.includes(r.id));
-  const otherRecipes = getAllRecipes().filter(r => !state.selected.includes(r.id));
+  const pickPlan = state.selected[weekKeyOfDate(d)] || [];
+  const approvedRecipes = getAllRecipes().filter(r => pickPlan.includes(r.id));
+  const otherRecipes = getAllRecipes().filter(r => !pickPlan.includes(r.id));
   let h = '<div class="modal-overlay" id="meal-picker-modal" onclick="if(event.target===this)closePicker()">';
   h += '<div class="modal">';
   h += '<h3>Add meal to ' + dayName(d) + '</h3>';
@@ -656,7 +667,9 @@ function addMealToDay(dateStr, mealId) {
 }
 
 function addMealToDayAndSelect(dateStr, mealId) {
-  if (!state.selected.includes(mealId)) state.selected.push(mealId);
+  const wk = weekKeyOfDate(new Date(dateStr + 'T12:00:00'));
+  const arr = state.selected[wk] || (state.selected[wk] = []);
+  if (!arr.includes(mealId)) arr.push(mealId);
   addMealToDay(dateStr, mealId);
 }
 
@@ -741,12 +754,8 @@ function getMealsForWeek(offset) {
   dates.forEach(d => {
     (state.calendar[dateKey(d)]||[]).forEach(id => ids.add(id));
   });
-  // This week's list also includes plan meals not yet scheduled to any day
-  if (offset === 0) {
-    const scheduled = new Set();
-    Object.values(state.calendar).forEach(arr => (arr||[]).forEach(id => scheduled.add(id)));
-    state.selected.forEach(id => { if (!scheduled.has(id)) ids.add(id); });
-  }
+  // include this week's plan meals (whether or not assigned to a day)
+  planFor(offset).forEach(id => ids.add(id));
   return [...ids];
 }
 
@@ -755,7 +764,7 @@ function changeShopWeek(dir) { shopWeekOffset += dir; render(); }
 function getShoppingList(mealIds) {
   const catOrder = ['Meat','Produce','Dairy','Pantry','Spices','Noodles & Pasta'];
   const groups = {};
-  const ids = mealIds || state.selected;
+  const ids = mealIds || [];
 
   ids.forEach(id => {
     const r = getAllRecipes().find(r => r.id === id);
@@ -806,18 +815,19 @@ function getShoppingList(mealIds) {
 
 function render() {
   const browseEl = document.getElementById('browse-view');
-  const favEl = document.getElementById('favorites-view');
   const listEl = document.getElementById('list-view');
 
   document.getElementById('browse-count').textContent = getAllRecipes().length;
-  document.getElementById('meals-count').textContent = state.selected.length;
-  document.getElementById('fav-count').textContent = state.favorites.length;
+  document.getElementById('meals-count').textContent = planFor(0).length;
 
-  // Browse view
-  const inPlan = getAllRecipes().filter(r => state.selected.includes(r.id));
-  const rest = getAllRecipes().filter(r => !state.selected.includes(r.id));
+  // Browse view (current week's plan)
+  const curPlan = planFor(0);
+  const inPlan = getAllRecipes().filter(r => curPlan.includes(r.id));
+  const rest = getAllRecipes().filter(r => !curPlan.includes(r.id));
   const newOnes = rest.filter(isNewRecipe);
-  const available = rest.filter(r => !isNewRecipe(r));
+  const afterNew = rest.filter(r => !isNewRecipe(r));
+  const favs = afterNew.filter(r => state.favorites.includes(r.id));
+  const available = afterNew.filter(r => !state.favorites.includes(r.id));
 
   let browseHTML = '';
   if (inPlan.length > 0) {
@@ -828,24 +838,16 @@ function render() {
     browseHTML += '<div class="section-label">&#10024; New this week (' + newOnes.length + ')</div>';
     newOnes.forEach(r => { browseHTML += renderCard(r, false); });
   }
+  if (favs.length > 0) {
+    browseHTML += '<div class="section-label">&#9733; Favorites (' + favs.length + ')</div>';
+    favs.forEach(r => { browseHTML += renderCard(r, false); });
+  }
   if (available.length > 0) {
     browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
     available.forEach(r => { browseHTML += renderCard(r, false); });
   }
   browseEl.innerHTML = browseHTML;
 
-  // Favorites view
-  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
-  if (favRecipes.length === 0) {
-    favEl.innerHTML = '<div class="empty"><div class="icon">&#11088;</div><p>No favorites yet.<br>Star recipes you love to save them here.</p></div>';
-  } else {
-    let favHTML = '<div class="fav-banner">&#11088; Your starred recipes — tap the star on any meal to save it here for easy access.</div>';
-    favRecipes.forEach(r => {
-      const isSelected = state.selected.includes(r.id);
-      favHTML += renderCard(r, isSelected);
-    });
-    favEl.innerHTML = favHTML;
-  }
 
   // Calendar view
   const calEl = document.getElementById('calendar-view');
@@ -855,7 +857,7 @@ function render() {
   calHTML += '<h2>' + fmtDate(weekDates[0]) + ' — ' + fmtDate(weekDates[6]) + '</h2>';
   calHTML += '<button class="cal-nav-btn" onclick="changeWeek(1)">Next &rarr;</button>';
   calHTML += '</div>';
-  if (state.selected.length === 0) {
+  if (getMealsForWeek(calWeekOffset).length === 0) {
     calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>Add meals from the Browse tab first,<br>then assign them to days here.</p></div>';
   } else {
     // Unassigned meals inbox — meals selected but not on any day this week
@@ -863,7 +865,7 @@ function render() {
     weekDates.forEach(d => {
       (state.calendar[dateKey(d)]||[]).forEach(id => assignedThisWeek.add(id));
     });
-    const unassigned = state.selected.filter(id => !assignedThisWeek.has(id)).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
+    const unassigned = planFor(calWeekOffset).filter(id => !assignedThisWeek.has(id)).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
     if (unassigned.length > 0) {
       calHTML += '<div class="inbox-section">';
       calHTML += '<div class="inbox-label">&#128229; Unassigned (' + unassigned.length + ')</div>';
@@ -872,7 +874,7 @@ function render() {
         calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
         calHTML += '<div class="inbox-meal-actions">';
         calHTML += '<button class="inbox-assign-btn" onclick="openInboxAssign(\'' + r.id + '\')">Assign</button>';
-        calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\')" title="Remove meal">&times;</button>';
+        calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\',' + calWeekOffset + ')" title="Remove meal">&times;</button>';
         calHTML += '</div></div>';
       });
       calHTML += '</div>';
@@ -1071,7 +1073,7 @@ function closeWeekPicker() {
 
 function selectWeekAndPlan(offset) {
   wizardWeekOffset = offset;
-  wizardPicked = [...state.selected];
+  wizardPicked = [...planFor(offset)];
   closeWeekPicker();
   renderWizard();
 }
@@ -1147,10 +1149,10 @@ function closeWizard() {
 
 function wizardContinue() {
   if (wizardPicked.length === 0) return;
-  // Merge wizard picks into state.selected (add any new ones)
-  wizardPicked.forEach(id => {
-    if (!state.selected.includes(id)) state.selected.push(id);
-  });
+  // Save the picks as this chosen week's plan
+  const wk = weekKeyForOffset(wizardWeekOffset);
+  if (wizardPicked.length > 0) state.selected[wk] = [...wizardPicked];
+  else delete state.selected[wk];
   save();
   closeWizard();
 
