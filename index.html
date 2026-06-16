@@ -176,6 +176,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .wizard-footer{padding:16px 20px;background:var(--card);border-top:1px solid var(--border);position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center}
 .wizard-footer .btn{min-width:120px;text-align:center}
 .wizard-count{font-size:14px;color:var(--muted)}
+.wizard-count-full{color:var(--green);font-weight:600}
 .week-option{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);cursor:pointer;transition:all 0.15s}
 .week-option:active{background:var(--accent-light);border-color:var(--accent)}
 .week-option-info{flex:1}
@@ -1121,7 +1122,7 @@ function renderWizard() {
 
   h += '</div>';
   h += '<div class="wizard-footer">';
-  h += '<div class="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' selected</div>';
+  h += '<div class="wizard-count' + (wizardPicked.length>=5?' wizard-count-full':'') + '">' + wizardPicked.length + ' of 5 meals selected</div>';
   if (wizardPicked.length > 0) {
     h += '<button class="btn btn-add" onclick="wizardContinue()">Assign to days &#8250;</button>';
   } else {
