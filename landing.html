@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Planner — Weekly dinners, sorted</title>
+<meta name="description" content="Discover fresh ground-beef and fakeaway dinners every week, build a weekly plan, auto-generate your shopping list, and map meals to days.">
+<style>
+:root{--bg:#f0f4f0;--card:#fff;--text:#1a2e1a;--muted:#5e6e5e;--border:#d4ddd4;--accent:#3d7a4a;--accent-light:#e2f0e5;--accent-text:#1e4a26;--green:#1d9e75;--green-light:#e1f5ee;--green-text:#085041;--shadow:0 1px 3px rgba(0,0,0,0.05)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:inherit}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.btn{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:10px;font-size:16px;box-shadow:var(--shadow);transition:opacity .15s}
+.btn:active{opacity:.85}
+.btn-ghost{background:var(--card);color:var(--accent-text);border:1px solid var(--border)}
+.nav{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+.brand{font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px}
+.brand .dot{width:22px;height:22px;border-radius:6px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+.hero{padding:72px 0 56px;text-align:center}
+.eyebrow{display:inline-block;background:var(--accent-light);color:var(--accent-text);font-size:13px;font-weight:600;padding:6px 14px;border-radius:20px;margin-bottom:20px}
+.hero h1{font-size:44px;line-height:1.12;letter-spacing:-.5px;max-width:680px;margin:0 auto 18px}
+.hero p{font-size:19px;color:var(--muted);max-width:600px;margin:0 auto 30px}
+.cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.sources-line{margin-top:26px;font-size:13px;color:var(--muted)}
+.sources-line b{color:var(--accent-text)}
+.section{padding:56px 0}
+.section h2{font-size:30px;text-align:center;letter-spacing:-.3px;margin-bottom:8px}
+.section .sub{text-align:center;color:var(--muted);max-width:560px;margin:0 auto 40px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.feat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:var(--shadow)}
+.feat .ic{width:44px;height:44px;border-radius:11px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.feat h3{font-size:18px;margin-bottom:6px}
+.feat p{font-size:14.5px;color:var(--muted)}
+.steps{background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.steps .grid{grid-template-columns:repeat(4,1fr)}
+.step{text-align:center;padding:8px}
+.step .num{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.step h4{font-size:15px;margin-bottom:4px}
+.step p{font-size:13.5px;color:var(--muted)}
+.final{text-align:center;padding:72px 0}
+.final h2{font-size:32px;margin-bottom:12px}
+.final p{color:var(--muted);margin-bottom:26px;font-size:17px}
+footer{border-top:1px solid var(--border);padding:28px 0;text-align:center;color:var(--muted);font-size:13px}
+@media(max-width:720px){.hero h1{font-size:32px}.hero p{font-size:17px}.grid,.steps .grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <div class="brand"><span class="dot">&#127860;</span> Meal Planner</div>
+  <a class="btn" href="./" style="padding:9px 18px;font-size:14px">Open app</a>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <span class="eyebrow">&#10024; Fresh recipes added every Saturday</span>
+  <h1>Weeknight dinners, planned in five taps.</h1>
+  <p>Discover new ground-beef and fakeaway recipes each week, build your plan, and walk out the door with a shopping list that writes itself.</p>
+  <div class="cta-row">
+    <a class="btn" href="./">Start planning &#8594;</a>
+    <a class="btn btn-ghost" href="#how">See how it works</a>
+  </div>
+  <div class="sources-line">Recipes hand-picked from <b>Simple Home Edit</b>, <b>Budget Bytes</b> &amp; <b>Half Baked Harvest</b></div>
+</div></header>
+<section class="section"><div class="wrap">
+  <h2>Everything for the week in one place</h2>
+  <p class="sub">No more screenshots, open tabs, or scribbled lists. Pick what you'll cook and the rest follows.</p>
+  <div class="grid">
+    <div class="feat"><div class="ic">&#10024;</div><h3>New every week</h3><p>A fresh batch of bold, quick weeknight recipes lands automatically each Saturday &mdash; Asian, Mexican, and Mediterranean fakeaway favorites, flagged "New" so you spot them instantly.</p></div>
+    <div class="feat"><div class="ic">&#9733;</div><h3>Keep your winners</h3><p>Star the meals that were a hit. Your favorites stay one tap away in Browse, ready to drop into next week's plan.</p></div>
+    <div class="feat"><div class="ic">&#128722;</div><h3>Shopping list that writes itself</h3><p>Add recipes to your plan and the ingredients are grouped by aisle, deduplicated across meals, and checked off as you shop.</p></div>
+    <div class="feat"><div class="ic">&#128197;</div><h3>Map meals to days</h3><p>Drop each recipe onto a day of the week. Plan this week, next week, or two weeks out &mdash; each week keeps its own plan and list.</p></div>
+  </div>
+</div></section>
+<section class="steps" id="how"><div class="wrap section">
+  <h2>How it works</h2>
+  <p class="sub">From "what's for dinner?" to a full week, sorted.</p>
+  <div class="grid">
+    <div class="step"><div class="num">1</div><h4>Browse &amp; pick</h4><p>Choose from this week's new recipes and your starred favorites.</p></div>
+    <div class="step"><div class="num">2</div><h4>Build your plan</h4><p>Add up to five meals &mdash; a live counter keeps you on track.</p></div>
+    <div class="step"><div class="num">3</div><h4>Grab the list</h4><p>Your shopping list is ready the moment you've picked.</p></div>
+    <div class="step"><div class="num">4</div><h4>Set the days</h4><p>Assign meals to days so the week runs itself.</p></div>
+  </div>
+</div></section>
+<section class="final"><div class="wrap">
+  <h2>Ready for an easier week?</h2>
+  <p>It's free, fast, and syncs across your devices.</p>
+  <a class="btn" href="./">Open Meal Planner &#8594;</a>
+</div></section>
+<footer><div class="wrap">
+  Built for weeknight cooks &middot; Recipes from Simple Home Edit, Budget Bytes &amp; Half Baked Harvest
+</div></footer>
+</body>
+</html>
