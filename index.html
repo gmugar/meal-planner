@@ -420,6 +420,15 @@ const SOURCES = [
   {id:"budget-bytes",name:"Budget Bytes",url:"https://www.budgetbytes.com",notes:"one-pot meals, easy ground beef, budget comfort",active:true},
   {id:"half-baked-harvest",name:"Half Baked Harvest",url:"https://www.halfbakedharvest.com",notes:"beef recipes, bold Asian fakeaway, one-pan dinners",active:true}
 ];
+// Set these after deploying the sources-sync Worker (see /worker) to enable auto-sync.
+const SOURCES_SYNC_URL = "";
+const SOURCES_SYNC_KEY = "";
+async function loadRemoteSources(){
+  try{
+    const r = await fetch('sources.json', {cache:'no-store'});
+    if(r.ok){ const j = await r.json(); if(Array.isArray(j)&&j.length){ persistSources(j); if(document.getElementById('sources-modal')){ sourcesDraft = j.map(x=>({...x})); renderSourcesModal(); } } }
+  }catch(e){}
+}
 function getSources(){ try{ const s=JSON.parse(localStorage.getItem('mealPlannerSources')); if(Array.isArray(s)&&s.length) return s; }catch(e){} return SOURCES.map(x=>({...x})); }
 function persistSources(list){ localStorage.setItem('mealPlannerSources', JSON.stringify(list)); }
 function srcSlug(s){ return (String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')) || ('src-'+Date.now()); }
@@ -444,6 +453,7 @@ function renderSourcesModal(){
   });
   h+='<button class="btn-outline" style="width:100%;margin-top:8px" onclick="srcAdd()">+ Add a source</button>';
   h+='<div class="list-actions" style="margin-top:14px"><button class="btn btn-add" style="flex:1" onclick="srcSave()">Save sources</button><button class="btn-outline" onclick="srcCopy()">Copy list</button></div>';
+  h+='<p class="modal-sub" style="margin-top:10px;font-size:12px">'+(SOURCES_SYNC_URL ? 'Saved changes sync automatically to the weekly recipe finder.' : 'Edits are saved on this device. To apply them to the automatic weekly run, use \'Copy list\' and share it with Claude.')+'</p>';
   h+='<button class="modal-cancel" onclick="closeSourcesModal()">Close</button>';
   h+='</div></div>';
   document.body.insertAdjacentHTML('beforeend', h);
@@ -452,7 +462,26 @@ function srcToggle(i){ sourcesDraft[i].active=!sourcesDraft[i].active; renderSou
 function srcEdit(i,f,v){ sourcesDraft[i][f]=v; if(f==='name') sourcesDraft[i].id=srcSlug(v); }
 function srcDelete(i){ sourcesDraft.splice(i,1); renderSourcesModal(); }
 function srcAdd(){ sourcesDraft.push({id:'src-'+Date.now(),name:'',url:'',notes:'',active:true}); renderSourcesModal(); }
-function srcSave(){ const clean=sourcesDraft.filter(s=>(s.name||'').trim()||(s.url||'').trim()); clean.forEach(s=>{ if(!s.id) s.id=srcSlug(s.name); }); persistSources(clean); closeSourcesModal(); }
+async function srcSave(){
+  const clean=sourcesDraft.filter(s=>(s.name||'').trim()||(s.url||'').trim());
+  clean.forEach(s=>{ if(!s.id) s.id=srcSlug(s.name); });
+  persistSources(clean);
+  if(SOURCES_SYNC_URL){
+    try{
+      const headers={'Content-Type':'application/json'};
+      if(SOURCES_SYNC_KEY) headers['X-App-Key']=SOURCES_SYNC_KEY;
+      const r=await fetch(SOURCES_SYNC_URL,{method:'POST',headers,body:JSON.stringify({sources:clean})});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      closeSourcesModal();
+      alert('Sources saved and synced — the weekly recipe finder will use them.');
+    }catch(e){
+      alert('Saved on this device, but syncing to the recipe finder failed ('+e.message+'). Try Save again, or use Copy list.');
+    }
+  } else {
+    closeSourcesModal();
+  }
+  render();
+}
 function srcCopy(){ const txt=JSON.stringify(sourcesDraft.filter(s=>s.active).map(s=>({name:s.name,url:s.url,notes:s.notes})),null,2); if(navigator.clipboard) navigator.clipboard.writeText(txt); alert('Active sources copied to clipboard. Share this with Claude (or your weekly task) to apply it to the automatic run.'); }
 
 /* ── State management with Supabase sync ── */
@@ -563,6 +592,7 @@ sb.channel('meal_state_changes')
 
 // Initial load from Supabase
 loadFromSupabase();
+loadRemoteSources();
 
 /* ── App logic ── */
 
