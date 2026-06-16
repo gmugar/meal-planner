@@ -200,6 +200,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .tag-new{background:#fde68a;color:#92400e;font-weight:700}
+.src-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.src-input{flex:1 1 100%;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text)}
+.src-toggle{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);flex:0 0 auto}
+.src-del{background:none;border:none;color:#b3261e;font-size:12px;cursor:pointer;flex:0 0 auto;margin-left:auto}
 </style>
 </head>
 <body>
@@ -212,6 +216,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div style="display:flex;align-items:center;gap:8px">
     <button class="plan-go" onclick="openImportModal()" style="padding:6px 12px;font-size:12px">+ Add Recipe</button>
     <button class="plan-go" onclick="openWeekPicker()" style="padding:6px 12px;font-size:12px">+ New Plan</button>
+    <button class="plan-go" onclick="openSourcesModal()" style="padding:6px 12px;font-size:12px;background:var(--card);color:var(--accent-text);border:1px solid var(--border)">Sources</button>
     <div class="sync-badge connecting" id="sync-status">connecting...</div>
   </div>
 </div>
@@ -408,6 +413,47 @@ const RECIPES = [
     ]
   }
 ];
+
+/* ── Recipe sources (canonical list the weekly scraper reads) ── */
+const SOURCES = [
+  {id:"simple-home-edit",name:"Simple Home Edit",url:"https://simplehomeedit.com",notes:"fakeaway, one-pan, one-pot, ground beef",active:true},
+  {id:"budget-bytes",name:"Budget Bytes",url:"https://www.budgetbytes.com",notes:"one-pot meals, easy ground beef, budget comfort",active:true},
+  {id:"half-baked-harvest",name:"Half Baked Harvest",url:"https://www.halfbakedharvest.com",notes:"beef recipes, bold Asian fakeaway, one-pan dinners",active:true}
+];
+function getSources(){ try{ const s=JSON.parse(localStorage.getItem('mealPlannerSources')); if(Array.isArray(s)&&s.length) return s; }catch(e){} return SOURCES.map(x=>({...x})); }
+function persistSources(list){ localStorage.setItem('mealPlannerSources', JSON.stringify(list)); }
+function srcSlug(s){ return (String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')) || ('src-'+Date.now()); }
+function srcEscAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+let sourcesDraft = null;
+function openSourcesModal(){ sourcesDraft = getSources().map(x=>({...x})); renderSourcesModal(); }
+function closeSourcesModal(){ sourcesDraft=null; const m=document.getElementById('sources-modal'); if(m) m.remove(); }
+function renderSourcesModal(){
+  const old=document.getElementById('sources-modal'); if(old) old.remove();
+  let h='<div class="modal-overlay" id="sources-modal" onclick="if(event.target===this)closeSourcesModal()">';
+  h+='<div class="modal" style="max-height:88vh">';
+  h+='<div class="detail-header"><h3>Recipe sources</h3><button class="detail-close" onclick="closeSourcesModal()">&times;</button></div>';
+  h+='<p class="modal-sub">The Saturday recipe finder pulls new meals from the active sites below.</p>';
+  sourcesDraft.forEach((s,i)=>{
+    h+='<div class="src-row">';
+    h+='<label class="src-toggle"><input type="checkbox" '+(s.active?'checked':'')+' onchange="srcToggle('+i+')"> <span>'+(s.active?'Active':'Off')+'</span></label>';
+    h+='<button class="src-del" onclick="srcDelete('+i+')">Remove</button>';
+    h+='<input class="src-input" value="'+srcEscAttr(s.name)+'" placeholder="Site name" oninput="srcEdit('+i+',\'name\',this.value)">';
+    h+='<input class="src-input" value="'+srcEscAttr(s.url)+'" placeholder="https://..." oninput="srcEdit('+i+',\'url\',this.value)">';
+    h+='<input class="src-input" value="'+srcEscAttr(s.notes)+'" placeholder="What to look for (categories, keywords)" oninput="srcEdit('+i+',\'notes\',this.value)">';
+    h+='</div>';
+  });
+  h+='<button class="btn-outline" style="width:100%;margin-top:8px" onclick="srcAdd()">+ Add a source</button>';
+  h+='<div class="list-actions" style="margin-top:14px"><button class="btn btn-add" style="flex:1" onclick="srcSave()">Save sources</button><button class="btn-outline" onclick="srcCopy()">Copy list</button></div>';
+  h+='<button class="modal-cancel" onclick="closeSourcesModal()">Close</button>';
+  h+='</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+function srcToggle(i){ sourcesDraft[i].active=!sourcesDraft[i].active; renderSourcesModal(); }
+function srcEdit(i,f,v){ sourcesDraft[i][f]=v; if(f==='name') sourcesDraft[i].id=srcSlug(v); }
+function srcDelete(i){ sourcesDraft.splice(i,1); renderSourcesModal(); }
+function srcAdd(){ sourcesDraft.push({id:'src-'+Date.now(),name:'',url:'',notes:'',active:true}); renderSourcesModal(); }
+function srcSave(){ const clean=sourcesDraft.filter(s=>(s.name||'').trim()||(s.url||'').trim()); clean.forEach(s=>{ if(!s.id) s.id=srcSlug(s.name); }); persistSources(clean); closeSourcesModal(); }
+function srcCopy(){ const txt=JSON.stringify(sourcesDraft.filter(s=>s.active).map(s=>({name:s.name,url:s.url,notes:s.notes})),null,2); if(navigator.clipboard) navigator.clipboard.writeText(txt); alert('Active sources copied to clipboard. Share this with Claude (or your weekly task) to apply it to the automatic run.'); }
 
 /* ── State management with Supabase sync ── */
 let state = { selected: {}, checked: {}, favorites: [], calendar: {}, customRecipes: [] };
