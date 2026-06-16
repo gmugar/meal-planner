@@ -198,6 +198,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-import:disabled{opacity:0.4;cursor:default}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.tag-new{background:#fde68a;color:#92400e;font-weight:700}
 </style>
 </head>
 <body>
@@ -368,6 +369,7 @@ const RECIPES = [
   {
     id:"beef-taco-pasta",name:"Beef Taco Pasta",site:"Budget Bytes",
     url:"https://www.budgetbytes.com/beef-taco-pasta/",
+    added:"2026-06-13",
     desc:"A homemade hamburger-helper with a southwest spin — beef, cheesy tomato sauce, green chiles, and pasta all in one pot.",
     tags:["one-pot","fakeaway"],servings:6,
     ingredients:[
@@ -382,6 +384,7 @@ const RECIPES = [
   {
     id:"gochujang-beef-bowls",name:"Korean Gochujang Beef Bowls",site:"Half Baked Harvest",
     url:"https://www.halfbakedharvest.com/gochujang-beef-bowls/",
+    added:"2026-06-13",
     desc:"Quick-cooking ground beef tossed in a sweet-and-spicy gochujang sauce with peppers and shallots, served over rice with a pickled cucumber salad.",
     tags:["one-pan","fakeaway"],servings:6,
     ingredients:[
@@ -394,6 +397,7 @@ const RECIPES = [
   {
     id:"ginger-sesame-pineapple-beef",name:"Sticky Ginger Sesame Pineapple Beef",site:"Half Baked Harvest",
     url:"https://www.halfbakedharvest.com/ginger-sesame-pineapple-beef/",
+    added:"2026-06-13",
     desc:"Ground beef crisped in a spicy-sweet Thai chili sauce with broccoli and pineapple, served over rice with a pineapple-herb salad.",
     tags:["one-pan","fakeaway"],servings:6,
     ingredients:[
@@ -419,6 +423,11 @@ if (cached) {
 }
 
 function getAllRecipes() { return [...RECIPES, ...state.customRecipes]; }
+function isNewRecipe(r) {
+  if (!r.added) return false;
+  const days = (Date.now() - new Date(r.added + "T00:00:00")) / 86400000;
+  return days >= 0 && days <= 7;
+}
 
 function setSyncStatus(status) {
   const el = document.getElementById('sync-status');
@@ -731,6 +740,12 @@ function getMealsForWeek(offset) {
   dates.forEach(d => {
     (state.calendar[dateKey(d)]||[]).forEach(id => ids.add(id));
   });
+  // This week's list also includes plan meals not yet scheduled to any day
+  if (offset === 0) {
+    const scheduled = new Set();
+    Object.values(state.calendar).forEach(arr => (arr||[]).forEach(id => scheduled.add(id)));
+    state.selected.forEach(id => { if (!scheduled.has(id)) ids.add(id); });
+  }
   return [...ids];
 }
 
@@ -798,13 +813,19 @@ function render() {
   document.getElementById('fav-count').textContent = state.favorites.length;
 
   // Browse view
-  const approved = getAllRecipes().filter(r => state.selected.includes(r.id));
-  const available = getAllRecipes().filter(r => !state.selected.includes(r.id));
+  const inPlan = getAllRecipes().filter(r => state.selected.includes(r.id));
+  const rest = getAllRecipes().filter(r => !state.selected.includes(r.id));
+  const newOnes = rest.filter(isNewRecipe);
+  const available = rest.filter(r => !isNewRecipe(r));
 
   let browseHTML = '';
-  if (approved.length > 0) {
-    browseHTML += '<div class="section-label">Approved (' + approved.length + ')</div>';
-    approved.forEach(r => { browseHTML += renderCard(r, true); });
+  if (inPlan.length > 0) {
+    browseHTML += '<div class="section-label">Your plan (' + inPlan.length + ')</div>';
+    inPlan.forEach(r => { browseHTML += renderCard(r, true); });
+  }
+  if (newOnes.length > 0) {
+    browseHTML += '<div class="section-label">&#10024; New this week (' + newOnes.length + ')</div>';
+    newOnes.forEach(r => { browseHTML += renderCard(r, false); });
   }
   if (available.length > 0) {
     browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
@@ -888,7 +909,7 @@ function render() {
   shopHeader += '</div>';
 
   if (shopMealIds.length === 0) {
-    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Assign meals in the Calendar tab first.</p></div>';
+    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>Nothing to shop for yet.<br>Pick recipes from Browse to build your plan.</p></div>';
     document.getElementById('list-count').textContent = '0';
   } else {
     let totalItems = 0;
@@ -962,6 +983,7 @@ function renderCard(r, isSelected) {
   html += '<div class="card-header"><div class="card-title-row"><div>';
   html += '<h3 onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</h3>';
   html += '<div class="tags">';
+  if (isNewRecipe(r)) html += '<span class="tag tag-new">NEW</span>';
   r.tags.forEach(t => {
     if (t==='dairy-free') html += '<span class="tag tag-df">DF</span>';
     else if (t==='gluten-free') html += '<span class="tag tag-gf">GF</span>';
@@ -993,9 +1015,9 @@ function getWeekKey(d) {
 }
 
 // Saturday notification
-function checkSaturdayNotification() {
+function checkPlanNotification() {
   const now = new Date();
-  if (now.getDay() !== 6) return;
+  if (now.getDay() !== 0) return; // Sunday only
   const wk = 'planDismissed_' + getWeekKey(now);
   if (localStorage.getItem(wk)) return;
   const el = document.getElementById('plan-notification');
@@ -1068,27 +1090,34 @@ function renderWizard() {
   h += '<p class="wizard-hint">Tap recipes to add them to your plan. You\'ll assign them to specific days next.</p>';
 
   // Show favorites first if any
-  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
-  const otherRecipes = getAllRecipes().filter(r => !state.favorites.includes(r.id));
-  const ordered = [...favRecipes, ...otherRecipes];
+  const newRecipes = getAllRecipes().filter(isNewRecipe);
+  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id) && !isNewRecipe(r));
+  const otherRecipes = getAllRecipes().filter(r => !state.favorites.includes(r.id) && !isNewRecipe(r));
 
+  const renderWizardRecipe = (r) => {
+    const isPicked = wizardPicked.includes(r.id);
+    let s = '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
+    s += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + r.name + (isNewRecipe(r) ? ' <span class="tag tag-new">NEW</span>' : '') + '</div>';
+    s += '<div class="wizard-recipe-meta">';
+    r.tags.forEach(t => { s += t + ' · '; });
+    s += 'serves ' + r.servings + '</div></div>';
+    s += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
+    s += '</div>';
+    return s;
+  };
+
+  if (newRecipes.length > 0) {
+    h += '<div class="section-label" style="padding-top:8px">&#10024; New this week</div>';
+    newRecipes.forEach(r => { h += renderWizardRecipe(r); });
+  }
   if (favRecipes.length > 0) {
     h += '<div class="section-label" style="padding-top:8px">&#9733; Favorites</div>';
+    favRecipes.forEach(r => { h += renderWizardRecipe(r); });
   }
-
-  ordered.forEach((r, idx) => {
-    if (favRecipes.length > 0 && idx === favRecipes.length) {
-      h += '<div class="section-label" style="padding-top:8px">All Recipes</div>';
-    }
-    const isPicked = wizardPicked.includes(r.id);
-    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
-    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + r.name + '</div>';
-    h += '<div class="wizard-recipe-meta">';
-    r.tags.forEach(t => { h += t + ' · '; });
-    h += 'serves ' + r.servings + '</div></div>';
-    h += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
-    h += '</div>';
-  });
+  if (otherRecipes.length > 0) {
+    h += '<div class="section-label" style="padding-top:8px">All Recipes</div>';
+    otherRecipes.forEach(r => { h += renderWizardRecipe(r); });
+  }
 
   h += '</div>';
   h += '<div class="wizard-footer">';
@@ -1344,7 +1373,7 @@ function copyShoppingList() {
   });
 }
 
-checkSaturdayNotification();
+checkPlanNotification();
 render();
 </script>
 </body>
