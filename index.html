@@ -242,211 +242,1906 @@ let saving = false;
 
 const RECIPES = [
   {
-    id:"ramen",name:"One-Pan Beef Ramen Noodles",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
-    desc:"Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",
-    tags:["one-pan","dairy-free"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Garlic, minced",qty:"2 tsp"},{name:"Baby bok choy",qty:"1 bunch"},{name:"Bean sprouts",qty:"2½ cups"},{name:"Scallion",qty:"1"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tamari or soy sauce",qty:"¼ cup"},{name:"Sesame oil",qty:"2 tsp"},{name:"Hoisin sauce",qty:"¼ cup"},{name:"Mirin",qty:"2 tbsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"3 x 3 oz"}]}
+    "id": "ramen",
+    "name": "One-Pan Beef Ramen Noodles",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
+    "desc": "Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",
+    "tags": [
+      "one-pan",
+      "dairy-free"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Garlic, minced",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Baby bok choy",
+            "qty": "1 bunch"
+          },
+          {
+            "name": "Bean sprouts",
+            "qty": "2½ cups"
+          },
+          {
+            "name": "Scallion",
+            "qty": "1"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "¼ cup"
+          },
+          {
+            "name": "Sesame oil",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Hoisin sauce",
+            "qty": "¼ cup"
+          },
+          {
+            "name": "Mirin",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Sesame seeds",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Chilli oil crisp (optional)",
+            "qty": "to taste"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Ramen noodle packets (discard seasoning)",
+            "qty": "3 x 3 oz"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"lasagne",name:"One-Pot Lasagne",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/one-pot-lasagna/",
-    desc:"All the comfort of lasagne made in one pot on the stovetop, finished under the broiler.",
-    tags:["one-pot"],servings:8,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"2¼ lb"}]},
-      {cat:"Produce",items:[{name:"Onions",qty:"2"},{name:"Garlic cloves",qty:"3"},{name:"Carrots, large",qty:"2"},{name:"Fresh basil",qty:"½ cup"},{name:"Bay leaves",qty:"2"}]},
-      {cat:"Dairy",items:[{name:"Mozzarella, shredded",qty:"2 cups"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"4 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Passata",qty:"24 fl oz"},{name:"Beef stock",qty:"3 cups"}]},
-      {cat:"Spices",items:[{name:"Sea salt",qty:"½ tsp"},{name:"Black pepper",qty:"1 tsp"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Lasagne sheets",qty:"9 oz"}]}
+    "id": "lasagne",
+    "name": "One-Pot Lasagne",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/one-pot-lasagna/",
+    "desc": "All the comfort of lasagne made in one pot on the stovetop, finished under the broiler.",
+    "tags": [
+      "one-pot"
+    ],
+    "servings": 8,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "2¼ lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Onions",
+            "qty": "2"
+          },
+          {
+            "name": "Garlic cloves",
+            "qty": "3"
+          },
+          {
+            "name": "Carrots, large",
+            "qty": "2"
+          },
+          {
+            "name": "Fresh basil",
+            "qty": "½ cup"
+          },
+          {
+            "name": "Bay leaves",
+            "qty": "2"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Mozzarella, shredded",
+            "qty": "2 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "4 tbsp"
+          },
+          {
+            "name": "Tomato paste",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Passata",
+            "qty": "24 fl oz"
+          },
+          {
+            "name": "Beef stock",
+            "qty": "3 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Sea salt",
+            "qty": "½ tsp"
+          },
+          {
+            "name": "Black pepper",
+            "qty": "1 tsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Lasagne sheets",
+            "qty": "9 oz"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"bigmac-tacos",name:"Big Mac Tacos",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/big-mac-tacos/",
-    desc:"All the flavors of a Big Mac folded into crispy smashed tacos with that special burger sauce.",
-    tags:["fakeaway"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Onion",qty:"½"},{name:"Shredded lettuce",qty:"2 cups"},{name:"Dill pickles, sliced",qty:"½ cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},
-      {cat:"Dairy",items:[{name:"American cheese slices",qty:"8"}]},
-      {cat:"Pantry",items:[{name:"Olive oil spray",qty:"1 can"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},
-      {cat:"Spices",items:[{name:"Sweet paprika",qty:"½ tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Small flour tortillas",qty:"8"}]}
+    "id": "bigmac-tacos",
+    "name": "Big Mac Tacos",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/big-mac-tacos/",
+    "desc": "All the flavors of a Big Mac folded into crispy smashed tacos with that special burger sauce.",
+    "tags": [
+      "fakeaway"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Onion",
+            "qty": "½"
+          },
+          {
+            "name": "Shredded lettuce",
+            "qty": "2 cups"
+          },
+          {
+            "name": "Dill pickles, sliced",
+            "qty": "½ cup"
+          },
+          {
+            "name": "Dill pickles, chopped (for sauce)",
+            "qty": "2 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "American cheese slices",
+            "qty": "8"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil spray",
+            "qty": "1 can"
+          },
+          {
+            "name": "Mayonnaise",
+            "qty": "1 cup"
+          },
+          {
+            "name": "Dijon mustard",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Ketchup",
+            "qty": "1 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Sweet paprika",
+            "qty": "½ tsp"
+          },
+          {
+            "name": "Onion powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Garlic powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Sea salt",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Black pepper",
+            "qty": "½ tsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Small flour tortillas",
+            "qty": "8"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"taco-mac",name:"One-Pan Taco Mac & Cheese",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/one-pan-taco-mac-and-cheese/",
-    desc:"Taco-seasoned beef and pasta cooked together in one pan, loaded with melted cheese.",
-    tags:["one-pan"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Onion, brown",qty:"1"},{name:"Garlic, minced",qty:"1 tbsp"},{name:"Cilantro",qty:"¼ bunch"},{name:"Scallion",qty:"1"}]},
-      {cat:"Dairy",items:[{name:"Cream cheese",qty:"3½ oz"},{name:"Cheddar, shredded",qty:"½ cup"},{name:"Mexican cheese blend",qty:"1½ cups"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Crushed tomatoes (can)",qty:"14 oz"},{name:"Corn kernels (can)",qty:"14 oz"},{name:"Beef stock",qty:"4 cups"}]},
-      {cat:"Spices",items:[{name:"Ground cumin",qty:"2 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"½ tsp"},{name:"Black pepper",qty:"¼ tsp"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Pasta (macaroni, shells, or penne)",qty:"14 oz"}]}
+    "id": "taco-mac",
+    "name": "One-Pan Taco Mac & Cheese",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/one-pan-taco-mac-and-cheese/",
+    "desc": "Taco-seasoned beef and pasta cooked together in one pan, loaded with melted cheese.",
+    "tags": [
+      "one-pan"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Onion, brown",
+            "qty": "1"
+          },
+          {
+            "name": "Garlic, minced",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Cilantro",
+            "qty": "¼ bunch"
+          },
+          {
+            "name": "Scallion",
+            "qty": "1"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Cream cheese",
+            "qty": "3½ oz"
+          },
+          {
+            "name": "Cheddar, shredded",
+            "qty": "½ cup"
+          },
+          {
+            "name": "Mexican cheese blend",
+            "qty": "1½ cups"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Tomato paste",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Crushed tomatoes (can)",
+            "qty": "14 oz"
+          },
+          {
+            "name": "Corn kernels (can)",
+            "qty": "14 oz"
+          },
+          {
+            "name": "Beef stock",
+            "qty": "4 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Ground cumin",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Sweet paprika",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Dried oregano",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Onion powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Garlic powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Sea salt",
+            "qty": "½ tsp"
+          },
+          {
+            "name": "Black pepper",
+            "qty": "¼ tsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Pasta (macaroni, shells, or penne)",
+            "qty": "14 oz"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"bigmac-bowl",name:"Loaded Potato Big Mac Bowl",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/loaded-potato-big-mac-bowl/",
-    desc:"Crispy potatoes loaded with seasoned beef, pickles, lettuce, and special burger sauce. No bun required.",
-    tags:["gluten-free","fakeaway"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef, lean",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Potatoes",qty:"1½ lb"},{name:"Onion",qty:"1"},{name:"Romaine lettuce",qty:"1 head"},{name:"Dill pickles, sliced",qty:"½ cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},
-      {cat:"Dairy",items:[{name:"Melting cheese blend, shredded",qty:"2 cups"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"3 tbsp"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},
-      {cat:"Spices",items:[{name:"Sweet paprika",qty:"3 tsp"},{name:"Onion powder",qty:"2½ tsp"},{name:"Garlic powder",qty:"1½ tsp"},{name:"Sea salt",qty:"1½ tsp"},{name:"Black pepper",qty:"½ tsp"}]}
+    "id": "bigmac-bowl",
+    "name": "Loaded Potato Big Mac Bowl",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/loaded-potato-big-mac-bowl/",
+    "desc": "Crispy potatoes loaded with seasoned beef, pickles, lettuce, and special burger sauce. No bun required.",
+    "tags": [
+      "gluten-free",
+      "fakeaway"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef, lean",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Potatoes",
+            "qty": "1½ lb"
+          },
+          {
+            "name": "Onion",
+            "qty": "1"
+          },
+          {
+            "name": "Romaine lettuce",
+            "qty": "1 head"
+          },
+          {
+            "name": "Dill pickles, sliced",
+            "qty": "½ cup"
+          },
+          {
+            "name": "Dill pickles, chopped (for sauce)",
+            "qty": "2 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Melting cheese blend, shredded",
+            "qty": "2 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "3 tbsp"
+          },
+          {
+            "name": "Mayonnaise",
+            "qty": "1 cup"
+          },
+          {
+            "name": "Dijon mustard",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Ketchup",
+            "qty": "1 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Sweet paprika",
+            "qty": "3 tsp"
+          },
+          {
+            "name": "Onion powder",
+            "qty": "2½ tsp"
+          },
+          {
+            "name": "Garlic powder",
+            "qty": "1½ tsp"
+          },
+          {
+            "name": "Sea salt",
+            "qty": "1½ tsp"
+          },
+          {
+            "name": "Black pepper",
+            "qty": "½ tsp"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"hoisin-beef",name:"Sticky Hoisin Beef",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/sticky-hoisin-beef/",
-    desc:"Ground beef in a sticky hoisin glaze with wide rice noodles, cabbage, and carrots.",
-    tags:["dairy-free","fakeaway"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tbsp"},{name:"Scallions",qty:"2"},{name:"Carrot",qty:"1"},{name:"Napa cabbage, shredded",qty:"4 cups"},{name:"Lime wedges",qty:"to serve"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Sesame oil",qty:"1 tsp + for noodles"},{name:"Hoisin sauce",qty:"¼ cup"},{name:"Tamari or soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tbsp"},{name:"Crushed roasted peanuts (optional)",qty:"¼ cup"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Wide flat rice noodles",qty:"7 oz"}]}
+    "id": "hoisin-beef",
+    "name": "Sticky Hoisin Beef",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/sticky-hoisin-beef/",
+    "desc": "Ground beef in a sticky hoisin glaze with wide rice noodles, cabbage, and carrots.",
+    "tags": [
+      "dairy-free",
+      "fakeaway"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Garlic, minced",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Scallions",
+            "qty": "2"
+          },
+          {
+            "name": "Carrot",
+            "qty": "1"
+          },
+          {
+            "name": "Napa cabbage, shredded",
+            "qty": "4 cups"
+          },
+          {
+            "name": "Lime wedges",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Sesame oil",
+            "qty": "1 tsp + for noodles"
+          },
+          {
+            "name": "Hoisin sauce",
+            "qty": "¼ cup"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Dark soy sauce",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Rice wine vinegar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Brown sugar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Crushed roasted peanuts (optional)",
+            "qty": "¼ cup"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Wide flat rice noodles",
+            "qty": "7 oz"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"bbq-meatballs",name:"Sticky BBQ Meatballs",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/sticky-bbq-meatballs/",
-    desc:"Homemade beef meatballs tossed in a sticky, glossy BBQ glaze. Served with rice.",
-    tags:["dairy-free"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Onion, small (grated)",qty:"½"},{name:"Garlic, minced",qty:"3 tsp"},{name:"Scallions",qty:"to serve"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Panko breadcrumbs",qty:"½ cup"},{name:"Egg",qty:"1"},{name:"Ketchup",qty:"½ cup"},{name:"Brown sugar",qty:"¼ cup packed"},{name:"Honey",qty:"1 tbsp"},{name:"Soy sauce",qty:"2 tbsp"},{name:"Worcestershire sauce",qty:"1 tbsp"},{name:"Apple cider vinegar",qty:"1 tbsp"},{name:"Jasmine rice",qty:"to serve"}]},
-      {cat:"Spices",items:[{name:"Onion powder",qty:"1 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]}
+    "id": "bbq-meatballs",
+    "name": "Sticky BBQ Meatballs",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/sticky-bbq-meatballs/",
+    "desc": "Homemade beef meatballs tossed in a sticky, glossy BBQ glaze. Served with rice.",
+    "tags": [
+      "dairy-free"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Onion, small (grated)",
+            "qty": "½"
+          },
+          {
+            "name": "Garlic, minced",
+            "qty": "3 tsp"
+          },
+          {
+            "name": "Scallions",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Panko breadcrumbs",
+            "qty": "½ cup"
+          },
+          {
+            "name": "Egg",
+            "qty": "1"
+          },
+          {
+            "name": "Ketchup",
+            "qty": "½ cup"
+          },
+          {
+            "name": "Brown sugar",
+            "qty": "¼ cup packed"
+          },
+          {
+            "name": "Honey",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Soy sauce",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Worcestershire sauce",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Apple cider vinegar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Jasmine rice",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Onion powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Sweet paprika",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Sea salt",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Black pepper",
+            "qty": "½ tsp"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"peking-beef",name:"Peking-Style Beef",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/peking-style-beef/",
-    desc:"Ground beef with hoisin, soy, and five-spice served over rice with cucumber ribbons.",
-    tags:["dairy-free","fakeaway"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tsp"},{name:"Fresh ginger, grated",qty:"1 tbsp"},{name:"Cucumbers",qty:"2"},{name:"Scallions",qty:"2"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Hoisin sauce",qty:"3 tbsp"},{name:"Soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tsp"},{name:"Cornstarch",qty:"1 tsp"},{name:"Sesame oil",qty:"1 tsp"},{name:"Sesame seeds",qty:"to serve"},{name:"Jasmine rice",qty:"to serve"}]},
-      {cat:"Spices",items:[{name:"Chinese five-spice (optional)",qty:"½ tsp"}]}
+    "id": "peking-beef",
+    "name": "Peking-Style Beef",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/peking-style-beef/",
+    "desc": "Ground beef with hoisin, soy, and five-spice served over rice with cucumber ribbons.",
+    "tags": [
+      "dairy-free",
+      "fakeaway"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Garlic, minced",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Fresh ginger, grated",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Cucumbers",
+            "qty": "2"
+          },
+          {
+            "name": "Scallions",
+            "qty": "2"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Hoisin sauce",
+            "qty": "3 tbsp"
+          },
+          {
+            "name": "Soy sauce",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Dark soy sauce",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Rice wine vinegar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Brown sugar",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Cornstarch",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Sesame oil",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Sesame seeds",
+            "qty": "to serve"
+          },
+          {
+            "name": "Jasmine rice",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Chinese five-spice (optional)",
+            "qty": "½ tsp"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"gyros-tacos",name:"Gyros Smashed Tacos",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/gyros-smashed-tacos/",
-    desc:"Greek-spiced beef or lamb smashed onto tortillas, served gyro-style with tzatziki.",
-    tags:["dairy-free","fakeaway"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef or lamb",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Tomatoes",qty:"2"},{name:"Flat-leaf parsley",qty:"¼ bunch"},{name:"Lemon wedges",qty:"to serve"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"2 tbsp"},{name:"Tzatziki",qty:"to serve"}]},
-      {cat:"Spices",items:[{name:"Garlic powder",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Ground cumin",qty:"1 tsp"},{name:"Sweet paprika",qty:"½ tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Mini flour tortillas (6 inch)",qty:"8"}]}
+    "id": "gyros-tacos",
+    "name": "Gyros Smashed Tacos",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/gyros-smashed-tacos/",
+    "desc": "Greek-spiced beef or lamb smashed onto tortillas, served gyro-style with tzatziki.",
+    "tags": [
+      "dairy-free",
+      "fakeaway"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef or lamb",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Tomatoes",
+            "qty": "2"
+          },
+          {
+            "name": "Flat-leaf parsley",
+            "qty": "¼ bunch"
+          },
+          {
+            "name": "Lemon wedges",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Tzatziki",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Garlic powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Onion powder",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Dried oregano",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Ground cumin",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Sweet paprika",
+            "qty": "½ tsp"
+          },
+          {
+            "name": "Sea salt",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Black pepper",
+            "qty": "½ tsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Mini flour tortillas (6 inch)",
+            "qty": "8"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"chicken-ramen",name:"Chicken & Broccoli Ramen",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/one-pan-chicken-and-broccoli-ramen-noodles/",
-    desc:"Chicken thighs with broccoli and ramen noodles in a honey-soy glaze. All in one pan.",
-    tags:["one-pan","dairy-free"],servings:4,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Boneless skinless chicken thighs, diced",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Scallions",qty:"2"},{name:"Garlic, minced",qty:"2 tsp"},{name:"Fresh ginger, minced",qty:"2 tsp"},{name:"Broccoli, large head",qty:"1"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Honey",qty:"¼ cup"},{name:"Dark soy sauce",qty:"2 tbsp"},{name:"Oyster sauce",qty:"2 tbsp"},{name:"Mirin",qty:"2 tbsp"},{name:"Ketchup",qty:"1 tbsp"},{name:"Sesame oil",qty:"2 tsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},
-      {cat:"Spices",items:[{name:"Black pepper",qty:"¼ tsp"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"4 x 3 oz"}]}
+    "id": "chicken-ramen",
+    "name": "Chicken & Broccoli Ramen",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/one-pan-chicken-and-broccoli-ramen-noodles/",
+    "desc": "Chicken thighs with broccoli and ramen noodles in a honey-soy glaze. All in one pan.",
+    "tags": [
+      "one-pan",
+      "dairy-free"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Boneless skinless chicken thighs, diced",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Scallions",
+            "qty": "2"
+          },
+          {
+            "name": "Garlic, minced",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Fresh ginger, minced",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Broccoli, large head",
+            "qty": "1"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Honey",
+            "qty": "¼ cup"
+          },
+          {
+            "name": "Dark soy sauce",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Oyster sauce",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Mirin",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Ketchup",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Sesame oil",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Sesame seeds",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Chilli oil crisp (optional)",
+            "qty": "to taste"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Black pepper",
+            "qty": "¼ tsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Ramen noodle packets (discard seasoning)",
+            "qty": "4 x 3 oz"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"beef-taco-pasta",name:"Beef Taco Pasta",site:"Budget Bytes",
-    url:"https://www.budgetbytes.com/beef-taco-pasta/",
-    added:"2026-06-13",
-    desc:"A homemade hamburger-helper with a southwest spin — beef, cheesy tomato sauce, green chiles, and pasta all in one pot.",
-    tags:["one-pot","fakeaway"],servings:6,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1/2 lb"}]},
-      {cat:"Produce",items:[{name:"Yellow onion, diced",qty:"1"},{name:"Garlic cloves, minced",qty:"2"},{name:"Green onions, sliced",qty:"2"}]},
-      {cat:"Dairy",items:[{name:"Cheddar cheese, shredded",qty:"1 cup"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Diced tomatoes, with juices",qty:"15 oz can"},{name:"Diced green chiles, with juices",qty:"4 oz can"},{name:"Beef broth",qty:"2 cups"}]},
-      {cat:"Spices",items:[{name:"Taco seasoning",qty:"1 oz packet"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Small pasta shells, uncooked",qty:"1/2 lb"}]}
+    "id": "beef-taco-pasta",
+    "name": "Beef Taco Pasta",
+    "site": "Budget Bytes",
+    "url": "https://www.budgetbytes.com/beef-taco-pasta/",
+    "added": "2026-06-13",
+    "desc": "A homemade hamburger-helper with a southwest spin — beef, cheesy tomato sauce, green chiles, and pasta all in one pot.",
+    "tags": [
+      "one-pot",
+      "fakeaway"
+    ],
+    "servings": 6,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1/2 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Yellow onion, diced",
+            "qty": "1"
+          },
+          {
+            "name": "Garlic cloves, minced",
+            "qty": "2"
+          },
+          {
+            "name": "Green onions, sliced",
+            "qty": "2"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Cheddar cheese, shredded",
+            "qty": "1 cup"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Diced tomatoes, with juices",
+            "qty": "15 oz can"
+          },
+          {
+            "name": "Diced green chiles, with juices",
+            "qty": "4 oz can"
+          },
+          {
+            "name": "Beef broth",
+            "qty": "2 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Taco seasoning",
+            "qty": "1 oz packet"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Small pasta shells, uncooked",
+            "qty": "1/2 lb"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"gochujang-beef-bowls",name:"Korean Gochujang Beef Bowls",site:"Half Baked Harvest",
-    url:"https://www.halfbakedharvest.com/gochujang-beef-bowls/",
-    added:"2026-06-13",
-    desc:"Quick-cooking ground beef tossed in a sweet-and-spicy gochujang sauce with peppers and shallots, served over rice with a pickled cucumber salad.",
-    tags:["one-pan","fakeaway"],servings:6,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef (or chicken or pork)",qty:"1 1/2 lbs"}]},
-      {cat:"Produce",items:[{name:"Bell peppers, sliced",qty:"2"},{name:"Shallots, sliced",qty:"3"},{name:"Garlic, chopped",qty:"4 cloves"},{name:"Persian cucumbers, chopped",qty:"4"},{name:"Green onion / Thai basil, chopped",qty:"1/4 cup"}]},
-      {cat:"Dairy",items:[{name:"Butter",qty:"2 tbsp"}]},
-      {cat:"Pantry",items:[{name:"Pickled ginger (or 1 tbsp grated fresh ginger)",qty:"1/4 cup"},{name:"Tamari or soy sauce",qty:"1/2 cup"},{name:"Gochujang (Korean chili paste)",qty:"2-3 tbsp"},{name:"Gochujang for cucumber salad",qty:"1 tbsp"},{name:"Ginger juice",qty:"2 tbsp"},{name:"Ginger juice or rice vinegar for salad",qty:"2 tbsp"},{name:"Maple syrup or honey",qty:"2 tbsp"},{name:"Toasted sesame seeds",qty:"1/4 cup"},{name:"Roasted peanuts, chopped",qty:"1/3 cup"},{name:"Cooked rice",qty:"to serve"}]}
+    "id": "gochujang-beef-bowls",
+    "name": "Korean Gochujang Beef Bowls",
+    "site": "Half Baked Harvest",
+    "url": "https://www.halfbakedharvest.com/gochujang-beef-bowls/",
+    "added": "2026-06-13",
+    "desc": "Quick-cooking ground beef tossed in a sweet-and-spicy gochujang sauce with peppers and shallots, served over rice with a pickled cucumber salad.",
+    "tags": [
+      "one-pan",
+      "fakeaway"
+    ],
+    "servings": 6,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef (or chicken or pork)",
+            "qty": "1 1/2 lbs"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Bell peppers, sliced",
+            "qty": "2"
+          },
+          {
+            "name": "Shallots, sliced",
+            "qty": "3"
+          },
+          {
+            "name": "Garlic, chopped",
+            "qty": "4 cloves"
+          },
+          {
+            "name": "Persian cucumbers, chopped",
+            "qty": "4"
+          },
+          {
+            "name": "Green onion / Thai basil, chopped",
+            "qty": "1/4 cup"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Butter",
+            "qty": "2 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Pickled ginger (or 1 tbsp grated fresh ginger)",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "1/2 cup"
+          },
+          {
+            "name": "Gochujang (Korean chili paste)",
+            "qty": "2-3 tbsp"
+          },
+          {
+            "name": "Gochujang for cucumber salad",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Ginger juice",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Ginger juice or rice vinegar for salad",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Maple syrup or honey",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Toasted sesame seeds",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Roasted peanuts, chopped",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Cooked rice",
+            "qty": "to serve"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"ginger-sesame-pineapple-beef",name:"Sticky Ginger Sesame Pineapple Beef",site:"Half Baked Harvest",
-    url:"https://www.halfbakedharvest.com/ginger-sesame-pineapple-beef/",
-    added:"2026-06-13",
-    desc:"Ground beef crisped in a spicy-sweet Thai chili sauce with broccoli and pineapple, served over rice with a pineapple-herb salad.",
-    tags:["one-pan","fakeaway"],servings:6,
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef (or chicken or pork)",qty:"1 1/2 lbs"}]},
-      {cat:"Produce",items:[{name:"Garlic, chopped",qty:"4 cloves"},{name:"Broccoli florets",qty:"1 1/2 cups"},{name:"Fresh pineapple chunks",qty:"1 1/2 cups"},{name:"Persian cucumbers, chopped",qty:"4"},{name:"Cilantro, chopped",qty:"2 cups"},{name:"Thai basil, chopped",qty:"1/2 cup"},{name:"Green onions, chopped",qty:"1/4 cup"}]},
-      {cat:"Dairy",items:[{name:"Butter",qty:"2 tbsp"}]},
-      {cat:"Pantry",items:[{name:"Pickled ginger (or 1 tbsp grated fresh ginger)",qty:"1/4 cup"},{name:"Tamari or soy sauce",qty:"1/3 cup"},{name:"Sweet Thai chili sauce",qty:"1/4 cup"},{name:"Sesame seeds",qty:"2 tbsp"},{name:"Lime juice",qty:"2 tbsp"},{name:"Roasted peanuts, chopped",qty:"1/3 cup"},{name:"Cooked rice",qty:"to serve"}]},
-      {cat:"Spices",items:[{name:"Black pepper and chili flakes",qty:"to taste"}]}
-    ]
-  }
-,
-  {
-    id:"cheeseburger-pasta",name:"One Pot Cheeseburger Pasta",site:"Budget Bytes",
-    url:"https://www.budgetbytes.com/skillet-cheeseburger-pasta/",
-    desc:"A fast homemade version of hamburger helper - beefy, cheesy pasta cooked all in one pot for easy cleanup.",
-    tags:["one-pot","fakeaway"],servings:4,added:"2026-06-20",
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef",qty:"1/2 lb"}]},
-      {cat:"Produce",items:[{name:"Yellow onion",qty:"1"},{name:"Green onions, sliced (optional)",qty:"2"}]},
-      {cat:"Dairy",items:[{name:"Cheddar cheese, shredded",qty:"4 oz"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"All-purpose flour",qty:"2 tbsp"},{name:"Tomato sauce",qty:"1 can (8 oz)"},{name:"Beef broth",qty:"2 cups"},{name:"Hot dog relish (dill relish + mustard)",qty:"2 tbsp"}]},
-      {cat:"Noodles & Pasta",items:[{name:"Pasta shells, uncooked",qty:"1/2 lb"}]}
+    "id": "ginger-sesame-pineapple-beef",
+    "name": "Sticky Ginger Sesame Pineapple Beef",
+    "site": "Half Baked Harvest",
+    "url": "https://www.halfbakedharvest.com/ginger-sesame-pineapple-beef/",
+    "added": "2026-06-13",
+    "desc": "Ground beef crisped in a spicy-sweet Thai chili sauce with broccoli and pineapple, served over rice with a pineapple-herb salad.",
+    "tags": [
+      "one-pan",
+      "fakeaway"
+    ],
+    "servings": 6,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef (or chicken or pork)",
+            "qty": "1 1/2 lbs"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Garlic, chopped",
+            "qty": "4 cloves"
+          },
+          {
+            "name": "Broccoli florets",
+            "qty": "1 1/2 cups"
+          },
+          {
+            "name": "Fresh pineapple chunks",
+            "qty": "1 1/2 cups"
+          },
+          {
+            "name": "Persian cucumbers, chopped",
+            "qty": "4"
+          },
+          {
+            "name": "Cilantro, chopped",
+            "qty": "2 cups"
+          },
+          {
+            "name": "Thai basil, chopped",
+            "qty": "1/2 cup"
+          },
+          {
+            "name": "Green onions, chopped",
+            "qty": "1/4 cup"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Butter",
+            "qty": "2 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Pickled ginger (or 1 tbsp grated fresh ginger)",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Sweet Thai chili sauce",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Sesame seeds",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Lime juice",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Roasted peanuts, chopped",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Cooked rice",
+            "qty": "to serve"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Black pepper and chili flakes",
+            "qty": "to taste"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"thai-basil-beef",name:"Thai Basil Beef and Lemongrass Rice Bowls",site:"Half Baked Harvest",
-    url:"https://www.halfbakedharvest.com/20-minute-thai-basil-beef-lemongrass-rice-bowls/",
-    desc:"Ground beef caramelized in a sweet Thai basil chili sauce over creamy lemongrass coconut rice, topped with a bright carrot-pepper salad. Ready in about 20 minutes.",
-    tags:["one-pan","fakeaway","dairy-free"],servings:4,added:"2026-06-20",
-    ingredients:[
-      {cat:"Meat",items:[{name:"Lean ground beef (or chicken or pork)",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Shredded carrots",qty:"1 cup"},{name:"Bell pepper, sliced",qty:"1"},{name:"Cherry tomatoes, halved",qty:"1/2 cup"},{name:"Green onions, chopped",qty:"4"},{name:"Garlic, chopped",qty:"4 cloves"},{name:"Fresh ginger, grated",qty:"1 tbsp"},{name:"Lime juice",qty:"2 tbsp"},{name:"Thai or sweet Italian basil, chopped",qty:"2 cups"}]},
-      {cat:"Pantry",items:[{name:"Toasted sesame oil",qty:"2 tbsp"},{name:"Rice vinegar",qty:"1 tbsp"},{name:"Fish sauce or tamari",qty:"1 tbsp"},{name:"Honey",qty:"2 tsp"},{name:"Tamari or soy sauce",qty:"1/3 cup"},{name:"Sweet Thai chili sauce",qty:"1/3 cup"},{name:"Sesame seeds and peanuts, for serving",qty:"to taste"},{name:"Coconut milk",qty:"1 can (14 oz)"},{name:"Water",qty:"1/3 cup"},{name:"Jasmine rice",qty:"1 1/2 cups"},{name:"Lemongrass paste",qty:"1 tbsp"}]},
-      {cat:"Spices",items:[{name:"Black pepper",qty:"to taste"}]}
+    "id": "cheeseburger-pasta",
+    "name": "One Pot Cheeseburger Pasta",
+    "site": "Budget Bytes",
+    "url": "https://www.budgetbytes.com/skillet-cheeseburger-pasta/",
+    "desc": "A fast homemade version of hamburger helper - beefy, cheesy pasta cooked all in one pot for easy cleanup.",
+    "tags": [
+      "one-pot",
+      "fakeaway"
+    ],
+    "servings": 4,
+    "added": "2026-06-20",
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1/2 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Yellow onion",
+            "qty": "1"
+          },
+          {
+            "name": "Green onions, sliced (optional)",
+            "qty": "2"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Cheddar cheese, shredded",
+            "qty": "4 oz"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "All-purpose flour",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Tomato sauce",
+            "qty": "1 can (8 oz)"
+          },
+          {
+            "name": "Beef broth",
+            "qty": "2 cups"
+          },
+          {
+            "name": "Hot dog relish (dill relish + mustard)",
+            "qty": "2 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Pasta shells, uncooked",
+            "qty": "1/2 lb"
+          }
+        ]
+      }
     ]
   },
   {
-    id:"speedy-beef-teriyaki",name:"Speedy Beef Teriyaki",site:"Simple Home Edit",
-    url:"https://simplehomeedit.com/recipe/speedy-beef-teriyaki/",
-    desc:"Ground beef simmered in a sticky homemade teriyaki sauce, served over rice with carrot, edamame, cabbage and a dollop of Kewpie mayo. On the table in under 20 minutes.",
-    tags:["one-pan","fakeaway","dairy-free"],servings:4,added:"2026-06-20",
-    ingredients:[
-      {cat:"Meat",items:[{name:"Ground beef (or chicken, turkey or pork)",qty:"1 lb"}]},
-      {cat:"Produce",items:[{name:"Onion, finely diced",qty:"1"},{name:"Garlic, minced",qty:"1 tsp"},{name:"Carrot, julienned",qty:"1"},{name:"Frozen edamame beans, thawed",qty:"1/2 cup"},{name:"Red cabbage, finely shredded",qty:"1/4 head"},{name:"Spring onion (scallion), sliced",qty:"1"}]},
-      {cat:"Pantry",items:[{name:"Olive oil",qty:"2 tbsp"},{name:"Teriyaki sauce (store-bought, or homemade below)",qty:"1/4 cup"},{name:"Cornstarch",qty:"1 tbsp"},{name:"Water",qty:"1/4 cup"},{name:"Mirin",qty:"2 tbsp"},{name:"Cooking sake",qty:"2 tbsp"},{name:"Tamari or soy sauce",qty:"2 tsp"},{name:"Brown sugar",qty:"1 tbsp"},{name:"Sesame seeds",qty:"1 tsp"},{name:"Kewpie or whole-egg mayonnaise",qty:"4 tsp"},{name:"Steamed rice",qty:"to serve"}]}
+    "id": "thai-basil-beef",
+    "name": "Thai Basil Beef and Lemongrass Rice Bowls",
+    "site": "Half Baked Harvest",
+    "url": "https://www.halfbakedharvest.com/20-minute-thai-basil-beef-lemongrass-rice-bowls/",
+    "desc": "Ground beef caramelized in a sweet Thai basil chili sauce over creamy lemongrass coconut rice, topped with a bright carrot-pepper salad. Ready in about 20 minutes.",
+    "tags": [
+      "one-pan",
+      "fakeaway",
+      "dairy-free"
+    ],
+    "servings": 4,
+    "added": "2026-06-20",
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Lean ground beef (or chicken or pork)",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Shredded carrots",
+            "qty": "1 cup"
+          },
+          {
+            "name": "Bell pepper, sliced",
+            "qty": "1"
+          },
+          {
+            "name": "Cherry tomatoes, halved",
+            "qty": "1/2 cup"
+          },
+          {
+            "name": "Green onions, chopped",
+            "qty": "4"
+          },
+          {
+            "name": "Garlic, chopped",
+            "qty": "4 cloves"
+          },
+          {
+            "name": "Fresh ginger, grated",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Lime juice",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Thai or sweet Italian basil, chopped",
+            "qty": "2 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Toasted sesame oil",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Rice vinegar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Fish sauce or tamari",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Honey",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Sweet Thai chili sauce",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Sesame seeds and peanuts, for serving",
+            "qty": "to taste"
+          },
+          {
+            "name": "Coconut milk",
+            "qty": "1 can (14 oz)"
+          },
+          {
+            "name": "Water",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Jasmine rice",
+            "qty": "1 1/2 cups"
+          },
+          {
+            "name": "Lemongrass paste",
+            "qty": "1 tbsp"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Black pepper",
+            "qty": "to taste"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "speedy-beef-teriyaki",
+    "name": "Speedy Beef Teriyaki",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/speedy-beef-teriyaki/",
+    "desc": "Ground beef simmered in a sticky homemade teriyaki sauce, served over rice with carrot, edamame, cabbage and a dollop of Kewpie mayo. On the table in under 20 minutes.",
+    "tags": [
+      "one-pan",
+      "fakeaway",
+      "dairy-free"
+    ],
+    "servings": 4,
+    "added": "2026-06-20",
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef (or chicken, turkey or pork)",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Onion, finely diced",
+            "qty": "1"
+          },
+          {
+            "name": "Garlic, minced",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Carrot, julienned",
+            "qty": "1"
+          },
+          {
+            "name": "Frozen edamame beans, thawed",
+            "qty": "1/2 cup"
+          },
+          {
+            "name": "Red cabbage, finely shredded",
+            "qty": "1/4 head"
+          },
+          {
+            "name": "Spring onion (scallion), sliced",
+            "qty": "1"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Teriyaki sauce (store-bought, or homemade below)",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Cornstarch",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Water",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Mirin",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Cooking sake",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "2 tsp"
+          },
+          {
+            "name": "Brown sugar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Sesame seeds",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Kewpie or whole-egg mayonnaise",
+            "qty": "4 tsp"
+          },
+          {
+            "name": "Steamed rice",
+            "qty": "to serve"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sticky-beef-noodles",
+    "name": "Sticky Beef Noodles",
+    "site": "Simple Home Edit",
+    "url": "https://simplehomeedit.com/recipe/sticky-beef-noodles/",
+    "added": "2026-06-29",
+    "desc": "A 15-minute one-pan fakeaway — ground beef in a sticky garlic-ginger sweet chilli sauce tossed through egg noodles with veggies.",
+    "tags": [
+      "one-pan",
+      "fakeaway"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Garlic, minced",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Ginger, minced",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Frozen mixed vegetables (e.g. broccoli)",
+            "qty": "2 cups"
+          },
+          {
+            "name": "Spring onions, sliced",
+            "qty": "2"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Sweet chilli sauce",
+            "qty": "1/3 cup"
+          },
+          {
+            "name": "Brown sugar",
+            "qty": "1 tsp"
+          },
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "3 tbsp"
+          },
+          {
+            "name": "Dark soy sauce",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Rice wine vinegar",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Cornstarch",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Water",
+            "qty": "1/2 cup"
+          },
+          {
+            "name": "Chilli oil, to serve (optional)",
+            "qty": "to taste"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Thin egg noodles",
+            "qty": "9 oz"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "korean-beef-sesame-noodles",
+    "name": "Korean Beef Sesame Noodles",
+    "site": "Half Baked Harvest",
+    "url": "https://www.halfbakedharvest.com/korean-beef-sesame-noodles/",
+    "added": "2026-06-29",
+    "desc": "A 20-minute stir-fry — gluten-free rice noodles tossed in a sweet-spicy gochujang sauce with caramelized beef, shallots, and veggies.",
+    "tags": [
+      "one-pan",
+      "fakeaway",
+      "gluten-free"
+    ],
+    "servings": 4,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Flank steak (or chicken breast), thinly sliced",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Garlic, chopped",
+            "qty": "4 cloves"
+          },
+          {
+            "name": "Fresh ginger, chopped",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Mixed stir-fry vegetables",
+            "qty": "3 cups"
+          },
+          {
+            "name": "Shallots, sliced",
+            "qty": "3"
+          },
+          {
+            "name": "Fresh basil",
+            "qty": "1/2 cup"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Tamari or soy sauce",
+            "qty": "1/2 cup"
+          },
+          {
+            "name": "Honey",
+            "qty": "1/4 cup"
+          },
+          {
+            "name": "Rice vinegar",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Gochujang (Korean chili paste)",
+            "qty": "2-3 tbsp"
+          },
+          {
+            "name": "Toasted sesame oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Sesame oil",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Toasted sesame seeds",
+            "qty": "1/4 cup"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Brown rice noodles",
+            "qty": "8 oz"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "one-pot-chili-mac",
+    "name": "One Pot Chili Mac",
+    "site": "Budget Bytes",
+    "url": "https://www.budgetbytes.com/chili-cheese-beef-n-mac/",
+    "added": "2026-06-29",
+    "desc": "A grown-up homemade hamburger helper — rich, beefy, chili-spiced tomato sauce with tender macaroni and melty cheddar, all in one pot.",
+    "tags": [
+      "one-pot"
+    ],
+    "servings": 6,
+    "ingredients": [
+      {
+        "cat": "Meat",
+        "items": [
+          {
+            "name": "Ground beef",
+            "qty": "1 lb"
+          }
+        ]
+      },
+      {
+        "cat": "Produce",
+        "items": [
+          {
+            "name": "Yellow onion, diced",
+            "qty": "1"
+          },
+          {
+            "name": "Garlic cloves, minced",
+            "qty": "2"
+          }
+        ]
+      },
+      {
+        "cat": "Dairy",
+        "items": [
+          {
+            "name": "Cheddar cheese, shredded",
+            "qty": "1 cup"
+          }
+        ]
+      },
+      {
+        "cat": "Pantry",
+        "items": [
+          {
+            "name": "Olive oil",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "All-purpose flour",
+            "qty": "2 tbsp"
+          },
+          {
+            "name": "Tomato sauce",
+            "qty": "8 oz"
+          },
+          {
+            "name": "Beef broth",
+            "qty": "3 cups"
+          }
+        ]
+      },
+      {
+        "cat": "Spices",
+        "items": [
+          {
+            "name": "Chili powder",
+            "qty": "1 tbsp"
+          },
+          {
+            "name": "Smoked paprika",
+            "qty": "1/2 tsp"
+          },
+          {
+            "name": "Garlic powder",
+            "qty": "1/2 tsp"
+          },
+          {
+            "name": "Dried oregano",
+            "qty": "1/2 tsp"
+          }
+        ]
+      },
+      {
+        "cat": "Noodles & Pasta",
+        "items": [
+          {
+            "name": "Uncooked macaroni (about 2 cups)",
+            "qty": "1/2 lb"
+          }
+        ]
+      }
     ]
   }
 ];
