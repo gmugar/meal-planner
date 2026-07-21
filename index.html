@@ -392,10 +392,12 @@ const cached = localStorage.getItem('mealPlannerState');
 if (cached) {
   try {
     const parsed = JSON.parse(cached);
-    state = { selected: parsed.selected || [], checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {}, customRecipes: parsed.customRecipes || [] };
+    state = { selected: ensureArray(parsed.selected), checked: ensureObject(parsed.checked), favorites: ensureArray(parsed.favorites), calendar: ensureObject(parsed.calendar), customRecipes: ensureArray(parsed.customRecipes) };
   } catch(e) {}
 }
 
+function ensureArray(v) { return Array.isArray(v) ? v : []; }
+function ensureObject(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
 function getAllRecipes() { return [...RECIPES, ...state.customRecipes]; }
 
 function setSyncStatus(status) {
@@ -409,11 +411,11 @@ async function loadFromSupabase() {
     const { data, error } = await sb.from('meal_state').select('*').eq('id', 1).single();
     if (error) throw error;
     if (data) {
-      state.selected = data.selected || [];
-      state.checked = data.checked || {};
-      state.favorites = data.favorites || [];
-      state.calendar = data.calendar || {};
-      state.customRecipes = data.custom_recipes || [];
+      state.selected = ensureArray(data.selected);
+      state.checked = ensureObject(data.checked);
+      state.favorites = ensureArray(data.favorites);
+      state.calendar = ensureObject(data.calendar);
+      state.customRecipes = ensureArray(data.custom_recipes);
       localStorage.setItem('mealPlannerState', JSON.stringify(state));
       render();
     }
@@ -460,11 +462,11 @@ sb.channel('meal_state_changes')
     if (saving) return; // ignore our own writes
     const data = payload.new;
     if (data) {
-      state.selected = data.selected || [];
-      state.checked = data.checked || {};
-      state.favorites = data.favorites || [];
-      state.calendar = data.calendar || {};
-      state.customRecipes = data.custom_recipes || [];
+      state.selected = ensureArray(data.selected);
+      state.checked = ensureObject(data.checked);
+      state.favorites = ensureArray(data.favorites);
+      state.calendar = ensureObject(data.calendar);
+      state.customRecipes = ensureArray(data.custom_recipes);
       localStorage.setItem('mealPlannerState', JSON.stringify(state));
       render();
     }
