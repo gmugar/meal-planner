@@ -176,7 +176,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .wizard-footer{padding:16px 20px;background:var(--card);border-top:1px solid var(--border);position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center}
 .wizard-footer .btn{min-width:120px;text-align:center}
 .wizard-count{font-size:14px;color:var(--muted)}
-.wizard-count-full{color:var(--green);font-weight:600}
+.wizard-day{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.wizard-day-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:14px;font-weight:600}
+.wizard-day-header .wd-date{font-size:12px;color:var(--muted);font-weight:400}
+.wizard-day-meals{padding:8px 12px;min-height:40px;display:flex;flex-direction:column;gap:6px}
+.wizard-day-meal{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;font-size:13px;font-weight:500}
+.wizard-day-meal .wdm-remove{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 2px;line-height:1}
+.wizard-day-meal .wdm-remove:active{color:var(--accent)}
+.wizard-unassigned{margin-bottom:16px}
+.wizard-unassigned-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.wizard-ua-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;margin:0 6px 6px 0;background:var(--accent-light);border:1px dashed var(--accent);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.wizard-ua-chip:active{background:var(--accent);color:#fff}
 .week-option{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--card);cursor:pointer;transition:all 0.15s}
 .week-option:active{background:var(--accent-light);border-color:var(--accent)}
 .week-option-info{flex:1}
@@ -184,6 +194,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .week-option-dates{font-size:12px;color:var(--muted);margin-top:2px}
 .week-option-arrow{color:var(--muted);font-size:18px;flex-shrink:0}
 /* Import recipe */
+.search-wrap{padding:0 0 12px;position:relative}
+.search-input{width:100%;padding:10px 14px 10px 36px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--card);color:var(--text)}
+.search-input:focus{outline:none;border-color:var(--accent)}
+.search-icon{position:absolute;left:12px;top:11px;font-size:14px;color:var(--muted);pointer-events:none}
+.search-clear{position:absolute;right:10px;top:7px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:2px 4px;line-height:1}
+.search-clear:active{color:var(--text)}
 .import-input{width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:12px;background:var(--bg);color:var(--text)}
 .import-input:focus{outline:none;border-color:var(--accent)}
 .import-status{font-size:13px;color:var(--muted);margin-bottom:12px;min-height:20px}
@@ -199,11 +215,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-import:disabled{opacity:0.4;cursor:default}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.tag-new{background:#fde68a;color:#92400e;font-weight:700}
-.src-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
-.src-input{flex:1 1 100%;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text)}
-.src-toggle{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);flex:0 0 auto}
-.src-del{background:none;border:none;color:#b3261e;font-size:12px;cursor:pointer;flex:0 0 auto;margin-left:auto}
 </style>
 </head>
 <body>
@@ -216,7 +227,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div style="display:flex;align-items:center;gap:8px">
     <button class="plan-go" onclick="openImportModal()" style="padding:6px 12px;font-size:12px">+ Add Recipe</button>
     <button class="plan-go" onclick="openWeekPicker()" style="padding:6px 12px;font-size:12px">+ New Plan</button>
-    <button class="plan-go" onclick="openSourcesModal()" style="padding:6px 12px;font-size:12px;background:var(--card);color:var(--accent-text);border:1px solid var(--border)">Sources</button>
     <div class="sync-badge connecting" id="sync-status">connecting...</div>
   </div>
 </div>
@@ -224,11 +234,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <div class="tabs">
   <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">10</span></button>
-  <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
+  <button class="tab" onclick="showView('favorites')"><span class="tab-icon">&#9733;</span>Favs<span class="badge" id="fav-count">0</span></button>
   <button class="tab" onclick="showView('calendar')"><span class="tab-icon">&#128197;</span>Calendar<span class="badge" id="meals-count">0</span></button>
+  <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
 </div>
 
 <div id="browse-view" class="view active"></div>
+<div id="favorites-view" class="view"></div>
 <div id="calendar-view" class="view"></div>
 <div id="list-view" class="view"></div>
 
@@ -242,2007 +254,149 @@ let saving = false;
 
 const RECIPES = [
   {
-    "id": "ramen",
-    "name": "One-Pan Beef Ramen Noodles",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
-    "desc": "Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",
-    "tags": [
-      "one-pan",
-      "dairy-free"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Garlic, minced",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Baby bok choy",
-            "qty": "1 bunch"
-          },
-          {
-            "name": "Bean sprouts",
-            "qty": "2½ cups"
-          },
-          {
-            "name": "Scallion",
-            "qty": "1"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "¼ cup"
-          },
-          {
-            "name": "Sesame oil",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Hoisin sauce",
-            "qty": "¼ cup"
-          },
-          {
-            "name": "Mirin",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Sesame seeds",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Chilli oil crisp (optional)",
-            "qty": "to taste"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Ramen noodle packets (discard seasoning)",
-            "qty": "3 x 3 oz"
-          }
-        ]
-      }
+    id:"ramen",name:"One-Pan Beef Ramen Noodles",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pan-beef-ramen-noodles/",
+    desc:"Ramen noodles cooked in the same pan as all the other ingredients. Low on stress, big on flavor.",
+    tags:["one-pan","dairy-free"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Garlic, minced",qty:"2 tsp"},{name:"Baby bok choy",qty:"1 bunch"},{name:"Bean sprouts",qty:"2½ cups"},{name:"Scallion",qty:"1"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tamari or soy sauce",qty:"¼ cup"},{name:"Sesame oil",qty:"2 tsp"},{name:"Hoisin sauce",qty:"¼ cup"},{name:"Mirin",qty:"2 tbsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"3 x 3 oz"}]}
     ]
   },
   {
-    "id": "lasagne",
-    "name": "One-Pot Lasagne",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/one-pot-lasagna/",
-    "desc": "All the comfort of lasagne made in one pot on the stovetop, finished under the broiler.",
-    "tags": [
-      "one-pot"
-    ],
-    "servings": 8,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "2¼ lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Onions",
-            "qty": "2"
-          },
-          {
-            "name": "Garlic cloves",
-            "qty": "3"
-          },
-          {
-            "name": "Carrots, large",
-            "qty": "2"
-          },
-          {
-            "name": "Fresh basil",
-            "qty": "½ cup"
-          },
-          {
-            "name": "Bay leaves",
-            "qty": "2"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Mozzarella, shredded",
-            "qty": "2 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "4 tbsp"
-          },
-          {
-            "name": "Tomato paste",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Passata",
-            "qty": "24 fl oz"
-          },
-          {
-            "name": "Beef stock",
-            "qty": "3 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Sea salt",
-            "qty": "½ tsp"
-          },
-          {
-            "name": "Black pepper",
-            "qty": "1 tsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Lasagne sheets",
-            "qty": "9 oz"
-          }
-        ]
-      }
+    id:"lasagne",name:"One-Pot Lasagne",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pot-lasagna/",
+    desc:"All the comfort of lasagne made in one pot on the stovetop, finished under the broiler.",
+    tags:["one-pot"],servings:8,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"2¼ lb"}]},
+      {cat:"Produce",items:[{name:"Onions",qty:"2"},{name:"Garlic cloves",qty:"3"},{name:"Carrots, large",qty:"2"},{name:"Fresh basil",qty:"½ cup"},{name:"Bay leaves",qty:"2"}]},
+      {cat:"Dairy",items:[{name:"Mozzarella, shredded",qty:"2 cups"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"4 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Passata",qty:"24 fl oz"},{name:"Beef stock",qty:"3 cups"}]},
+      {cat:"Spices",items:[{name:"Sea salt",qty:"½ tsp"},{name:"Black pepper",qty:"1 tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Lasagne sheets",qty:"9 oz"}]}
     ]
   },
   {
-    "id": "bigmac-tacos",
-    "name": "Big Mac Tacos",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/big-mac-tacos/",
-    "desc": "All the flavors of a Big Mac folded into crispy smashed tacos with that special burger sauce.",
-    "tags": [
-      "fakeaway"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Onion",
-            "qty": "½"
-          },
-          {
-            "name": "Shredded lettuce",
-            "qty": "2 cups"
-          },
-          {
-            "name": "Dill pickles, sliced",
-            "qty": "½ cup"
-          },
-          {
-            "name": "Dill pickles, chopped (for sauce)",
-            "qty": "2 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "American cheese slices",
-            "qty": "8"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil spray",
-            "qty": "1 can"
-          },
-          {
-            "name": "Mayonnaise",
-            "qty": "1 cup"
-          },
-          {
-            "name": "Dijon mustard",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Ketchup",
-            "qty": "1 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Sweet paprika",
-            "qty": "½ tsp"
-          },
-          {
-            "name": "Onion powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Garlic powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Sea salt",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Black pepper",
-            "qty": "½ tsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Small flour tortillas",
-            "qty": "8"
-          }
-        ]
-      }
+    id:"bigmac-tacos",name:"Big Mac Tacos",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/big-mac-tacos/",
+    desc:"All the flavors of a Big Mac folded into crispy smashed tacos with that special burger sauce.",
+    tags:["fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Onion",qty:"½"},{name:"Shredded lettuce",qty:"2 cups"},{name:"Dill pickles, sliced",qty:"½ cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},
+      {cat:"Dairy",items:[{name:"American cheese slices",qty:"8"}]},
+      {cat:"Pantry",items:[{name:"Olive oil spray",qty:"1 can"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},
+      {cat:"Spices",items:[{name:"Sweet paprika",qty:"½ tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Small flour tortillas",qty:"8"}]}
     ]
   },
   {
-    "id": "taco-mac",
-    "name": "One-Pan Taco Mac & Cheese",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/one-pan-taco-mac-and-cheese/",
-    "desc": "Taco-seasoned beef and pasta cooked together in one pan, loaded with melted cheese.",
-    "tags": [
-      "one-pan"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Onion, brown",
-            "qty": "1"
-          },
-          {
-            "name": "Garlic, minced",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Cilantro",
-            "qty": "¼ bunch"
-          },
-          {
-            "name": "Scallion",
-            "qty": "1"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Cream cheese",
-            "qty": "3½ oz"
-          },
-          {
-            "name": "Cheddar, shredded",
-            "qty": "½ cup"
-          },
-          {
-            "name": "Mexican cheese blend",
-            "qty": "1½ cups"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Tomato paste",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Crushed tomatoes (can)",
-            "qty": "14 oz"
-          },
-          {
-            "name": "Corn kernels (can)",
-            "qty": "14 oz"
-          },
-          {
-            "name": "Beef stock",
-            "qty": "4 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Ground cumin",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Sweet paprika",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Dried oregano",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Onion powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Garlic powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Sea salt",
-            "qty": "½ tsp"
-          },
-          {
-            "name": "Black pepper",
-            "qty": "¼ tsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Pasta (macaroni, shells, or penne)",
-            "qty": "14 oz"
-          }
-        ]
-      }
+    id:"taco-mac",name:"One-Pan Taco Mac & Cheese",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pan-taco-mac-and-cheese/",
+    desc:"Taco-seasoned beef and pasta cooked together in one pan, loaded with melted cheese.",
+    tags:["one-pan"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Onion, brown",qty:"1"},{name:"Garlic, minced",qty:"1 tbsp"},{name:"Cilantro",qty:"¼ bunch"},{name:"Scallion",qty:"1"}]},
+      {cat:"Dairy",items:[{name:"Cream cheese",qty:"3½ oz"},{name:"Cheddar, shredded",qty:"½ cup"},{name:"Mexican cheese blend",qty:"1½ cups"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Tomato paste",qty:"2 tbsp"},{name:"Crushed tomatoes (can)",qty:"14 oz"},{name:"Corn kernels (can)",qty:"14 oz"},{name:"Beef stock",qty:"4 cups"}]},
+      {cat:"Spices",items:[{name:"Ground cumin",qty:"2 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Garlic powder",qty:"1 tsp"},{name:"Sea salt",qty:"½ tsp"},{name:"Black pepper",qty:"¼ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Pasta (macaroni, shells, or penne)",qty:"14 oz"}]}
     ]
   },
   {
-    "id": "bigmac-bowl",
-    "name": "Loaded Potato Big Mac Bowl",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/loaded-potato-big-mac-bowl/",
-    "desc": "Crispy potatoes loaded with seasoned beef, pickles, lettuce, and special burger sauce. No bun required.",
-    "tags": [
-      "gluten-free",
-      "fakeaway"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef, lean",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Potatoes",
-            "qty": "1½ lb"
-          },
-          {
-            "name": "Onion",
-            "qty": "1"
-          },
-          {
-            "name": "Romaine lettuce",
-            "qty": "1 head"
-          },
-          {
-            "name": "Dill pickles, sliced",
-            "qty": "½ cup"
-          },
-          {
-            "name": "Dill pickles, chopped (for sauce)",
-            "qty": "2 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Melting cheese blend, shredded",
-            "qty": "2 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "3 tbsp"
-          },
-          {
-            "name": "Mayonnaise",
-            "qty": "1 cup"
-          },
-          {
-            "name": "Dijon mustard",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Ketchup",
-            "qty": "1 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Sweet paprika",
-            "qty": "3 tsp"
-          },
-          {
-            "name": "Onion powder",
-            "qty": "2½ tsp"
-          },
-          {
-            "name": "Garlic powder",
-            "qty": "1½ tsp"
-          },
-          {
-            "name": "Sea salt",
-            "qty": "1½ tsp"
-          },
-          {
-            "name": "Black pepper",
-            "qty": "½ tsp"
-          }
-        ]
-      }
+    id:"bigmac-bowl",name:"Loaded Potato Big Mac Bowl",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/loaded-potato-big-mac-bowl/",
+    desc:"Crispy potatoes loaded with seasoned beef, pickles, lettuce, and special burger sauce. No bun required.",
+    tags:["gluten-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef, lean",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Potatoes",qty:"1½ lb"},{name:"Onion",qty:"1"},{name:"Romaine lettuce",qty:"1 head"},{name:"Dill pickles, sliced",qty:"½ cup"},{name:"Dill pickles, chopped (for sauce)",qty:"2 tbsp"}]},
+      {cat:"Dairy",items:[{name:"Melting cheese blend, shredded",qty:"2 cups"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"3 tbsp"},{name:"Mayonnaise",qty:"1 cup"},{name:"Dijon mustard",qty:"1 tsp"},{name:"Ketchup",qty:"1 tbsp"}]},
+      {cat:"Spices",items:[{name:"Sweet paprika",qty:"3 tsp"},{name:"Onion powder",qty:"2½ tsp"},{name:"Garlic powder",qty:"1½ tsp"},{name:"Sea salt",qty:"1½ tsp"},{name:"Black pepper",qty:"½ tsp"}]}
     ]
   },
   {
-    "id": "hoisin-beef",
-    "name": "Sticky Hoisin Beef",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/sticky-hoisin-beef/",
-    "desc": "Ground beef in a sticky hoisin glaze with wide rice noodles, cabbage, and carrots.",
-    "tags": [
-      "dairy-free",
-      "fakeaway"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Garlic, minced",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Scallions",
-            "qty": "2"
-          },
-          {
-            "name": "Carrot",
-            "qty": "1"
-          },
-          {
-            "name": "Napa cabbage, shredded",
-            "qty": "4 cups"
-          },
-          {
-            "name": "Lime wedges",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Sesame oil",
-            "qty": "1 tsp + for noodles"
-          },
-          {
-            "name": "Hoisin sauce",
-            "qty": "¼ cup"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Dark soy sauce",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Rice wine vinegar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Brown sugar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Crushed roasted peanuts (optional)",
-            "qty": "¼ cup"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Wide flat rice noodles",
-            "qty": "7 oz"
-          }
-        ]
-      }
+    id:"hoisin-beef",name:"Sticky Hoisin Beef",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/sticky-hoisin-beef/",
+    desc:"Ground beef in a sticky hoisin glaze with wide rice noodles, cabbage, and carrots.",
+    tags:["dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tbsp"},{name:"Scallions",qty:"2"},{name:"Carrot",qty:"1"},{name:"Napa cabbage, shredded",qty:"4 cups"},{name:"Lime wedges",qty:"to serve"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Sesame oil",qty:"1 tsp + for noodles"},{name:"Hoisin sauce",qty:"¼ cup"},{name:"Tamari or soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tbsp"},{name:"Crushed roasted peanuts (optional)",qty:"¼ cup"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Wide flat rice noodles",qty:"7 oz"}]}
     ]
   },
   {
-    "id": "bbq-meatballs",
-    "name": "Sticky BBQ Meatballs",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/sticky-bbq-meatballs/",
-    "desc": "Homemade beef meatballs tossed in a sticky, glossy BBQ glaze. Served with rice.",
-    "tags": [
-      "dairy-free"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Onion, small (grated)",
-            "qty": "½"
-          },
-          {
-            "name": "Garlic, minced",
-            "qty": "3 tsp"
-          },
-          {
-            "name": "Scallions",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Panko breadcrumbs",
-            "qty": "½ cup"
-          },
-          {
-            "name": "Egg",
-            "qty": "1"
-          },
-          {
-            "name": "Ketchup",
-            "qty": "½ cup"
-          },
-          {
-            "name": "Brown sugar",
-            "qty": "¼ cup packed"
-          },
-          {
-            "name": "Honey",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Soy sauce",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Worcestershire sauce",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Apple cider vinegar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Jasmine rice",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Onion powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Sweet paprika",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Sea salt",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Black pepper",
-            "qty": "½ tsp"
-          }
-        ]
-      }
+    id:"bbq-meatballs",name:"Sticky BBQ Meatballs",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/sticky-bbq-meatballs/",
+    desc:"Homemade beef meatballs tossed in a sticky, glossy BBQ glaze. Served with rice.",
+    tags:["dairy-free"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Onion, small (grated)",qty:"½"},{name:"Garlic, minced",qty:"3 tsp"},{name:"Scallions",qty:"to serve"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Panko breadcrumbs",qty:"½ cup"},{name:"Egg",qty:"1"},{name:"Ketchup",qty:"½ cup"},{name:"Brown sugar",qty:"¼ cup packed"},{name:"Honey",qty:"1 tbsp"},{name:"Soy sauce",qty:"2 tbsp"},{name:"Worcestershire sauce",qty:"1 tbsp"},{name:"Apple cider vinegar",qty:"1 tbsp"},{name:"Jasmine rice",qty:"to serve"}]},
+      {cat:"Spices",items:[{name:"Onion powder",qty:"1 tsp"},{name:"Sweet paprika",qty:"2 tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]}
     ]
   },
   {
-    "id": "peking-beef",
-    "name": "Peking-Style Beef",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/peking-style-beef/",
-    "desc": "Ground beef with hoisin, soy, and five-spice served over rice with cucumber ribbons.",
-    "tags": [
-      "dairy-free",
-      "fakeaway"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Garlic, minced",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Fresh ginger, grated",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Cucumbers",
-            "qty": "2"
-          },
-          {
-            "name": "Scallions",
-            "qty": "2"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Hoisin sauce",
-            "qty": "3 tbsp"
-          },
-          {
-            "name": "Soy sauce",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Dark soy sauce",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Rice wine vinegar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Brown sugar",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Cornstarch",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Sesame oil",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Sesame seeds",
-            "qty": "to serve"
-          },
-          {
-            "name": "Jasmine rice",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Chinese five-spice (optional)",
-            "qty": "½ tsp"
-          }
-        ]
-      }
+    id:"peking-beef",name:"Peking-Style Beef",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/peking-style-beef/",
+    desc:"Ground beef with hoisin, soy, and five-spice served over rice with cucumber ribbons.",
+    tags:["dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Garlic, minced",qty:"1 tsp"},{name:"Fresh ginger, grated",qty:"1 tbsp"},{name:"Cucumbers",qty:"2"},{name:"Scallions",qty:"2"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Hoisin sauce",qty:"3 tbsp"},{name:"Soy sauce",qty:"1 tbsp"},{name:"Dark soy sauce",qty:"1 tbsp"},{name:"Rice wine vinegar",qty:"1 tbsp"},{name:"Brown sugar",qty:"1 tsp"},{name:"Cornstarch",qty:"1 tsp"},{name:"Sesame oil",qty:"1 tsp"},{name:"Sesame seeds",qty:"to serve"},{name:"Jasmine rice",qty:"to serve"}]},
+      {cat:"Spices",items:[{name:"Chinese five-spice (optional)",qty:"½ tsp"}]}
     ]
   },
   {
-    "id": "gyros-tacos",
-    "name": "Gyros Smashed Tacos",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/gyros-smashed-tacos/",
-    "desc": "Greek-spiced beef or lamb smashed onto tortillas, served gyro-style with tzatziki.",
-    "tags": [
-      "dairy-free",
-      "fakeaway"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef or lamb",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Tomatoes",
-            "qty": "2"
-          },
-          {
-            "name": "Flat-leaf parsley",
-            "qty": "¼ bunch"
-          },
-          {
-            "name": "Lemon wedges",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Tzatziki",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Garlic powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Onion powder",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Dried oregano",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Ground cumin",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Sweet paprika",
-            "qty": "½ tsp"
-          },
-          {
-            "name": "Sea salt",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Black pepper",
-            "qty": "½ tsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Mini flour tortillas (6 inch)",
-            "qty": "8"
-          }
-        ]
-      }
+    id:"gyros-tacos",name:"Gyros Smashed Tacos",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/gyros-smashed-tacos/",
+    desc:"Greek-spiced beef or lamb smashed onto tortillas, served gyro-style with tzatziki.",
+    tags:["dairy-free","fakeaway"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Ground beef or lamb",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Tomatoes",qty:"2"},{name:"Flat-leaf parsley",qty:"¼ bunch"},{name:"Lemon wedges",qty:"to serve"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"2 tbsp"},{name:"Tzatziki",qty:"to serve"}]},
+      {cat:"Spices",items:[{name:"Garlic powder",qty:"1 tsp"},{name:"Onion powder",qty:"1 tsp"},{name:"Dried oregano",qty:"1 tsp"},{name:"Ground cumin",qty:"1 tsp"},{name:"Sweet paprika",qty:"½ tsp"},{name:"Sea salt",qty:"1 tsp"},{name:"Black pepper",qty:"½ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Mini flour tortillas (6 inch)",qty:"8"}]}
     ]
   },
   {
-    "id": "chicken-ramen",
-    "name": "Chicken & Broccoli Ramen",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/one-pan-chicken-and-broccoli-ramen-noodles/",
-    "desc": "Chicken thighs with broccoli and ramen noodles in a honey-soy glaze. All in one pan.",
-    "tags": [
-      "one-pan",
-      "dairy-free"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Boneless skinless chicken thighs, diced",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Scallions",
-            "qty": "2"
-          },
-          {
-            "name": "Garlic, minced",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Fresh ginger, minced",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Broccoli, large head",
-            "qty": "1"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Honey",
-            "qty": "¼ cup"
-          },
-          {
-            "name": "Dark soy sauce",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Oyster sauce",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Mirin",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Ketchup",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Sesame oil",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Sesame seeds",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Chilli oil crisp (optional)",
-            "qty": "to taste"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Black pepper",
-            "qty": "¼ tsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Ramen noodle packets (discard seasoning)",
-            "qty": "4 x 3 oz"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "beef-taco-pasta",
-    "name": "Beef Taco Pasta",
-    "site": "Budget Bytes",
-    "url": "https://www.budgetbytes.com/beef-taco-pasta/",
-    "added": "2026-06-13",
-    "desc": "A homemade hamburger-helper with a southwest spin — beef, cheesy tomato sauce, green chiles, and pasta all in one pot.",
-    "tags": [
-      "one-pot",
-      "fakeaway"
-    ],
-    "servings": 6,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1/2 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Yellow onion, diced",
-            "qty": "1"
-          },
-          {
-            "name": "Garlic cloves, minced",
-            "qty": "2"
-          },
-          {
-            "name": "Green onions, sliced",
-            "qty": "2"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Cheddar cheese, shredded",
-            "qty": "1 cup"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Diced tomatoes, with juices",
-            "qty": "15 oz can"
-          },
-          {
-            "name": "Diced green chiles, with juices",
-            "qty": "4 oz can"
-          },
-          {
-            "name": "Beef broth",
-            "qty": "2 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Taco seasoning",
-            "qty": "1 oz packet"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Small pasta shells, uncooked",
-            "qty": "1/2 lb"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "gochujang-beef-bowls",
-    "name": "Korean Gochujang Beef Bowls",
-    "site": "Half Baked Harvest",
-    "url": "https://www.halfbakedharvest.com/gochujang-beef-bowls/",
-    "added": "2026-06-13",
-    "desc": "Quick-cooking ground beef tossed in a sweet-and-spicy gochujang sauce with peppers and shallots, served over rice with a pickled cucumber salad.",
-    "tags": [
-      "one-pan",
-      "fakeaway"
-    ],
-    "servings": 6,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef (or chicken or pork)",
-            "qty": "1 1/2 lbs"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Bell peppers, sliced",
-            "qty": "2"
-          },
-          {
-            "name": "Shallots, sliced",
-            "qty": "3"
-          },
-          {
-            "name": "Garlic, chopped",
-            "qty": "4 cloves"
-          },
-          {
-            "name": "Persian cucumbers, chopped",
-            "qty": "4"
-          },
-          {
-            "name": "Green onion / Thai basil, chopped",
-            "qty": "1/4 cup"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Butter",
-            "qty": "2 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Pickled ginger (or 1 tbsp grated fresh ginger)",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "1/2 cup"
-          },
-          {
-            "name": "Gochujang (Korean chili paste)",
-            "qty": "2-3 tbsp"
-          },
-          {
-            "name": "Gochujang for cucumber salad",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Ginger juice",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Ginger juice or rice vinegar for salad",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Maple syrup or honey",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Toasted sesame seeds",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Roasted peanuts, chopped",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Cooked rice",
-            "qty": "to serve"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "ginger-sesame-pineapple-beef",
-    "name": "Sticky Ginger Sesame Pineapple Beef",
-    "site": "Half Baked Harvest",
-    "url": "https://www.halfbakedharvest.com/ginger-sesame-pineapple-beef/",
-    "added": "2026-06-13",
-    "desc": "Ground beef crisped in a spicy-sweet Thai chili sauce with broccoli and pineapple, served over rice with a pineapple-herb salad.",
-    "tags": [
-      "one-pan",
-      "fakeaway"
-    ],
-    "servings": 6,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef (or chicken or pork)",
-            "qty": "1 1/2 lbs"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Garlic, chopped",
-            "qty": "4 cloves"
-          },
-          {
-            "name": "Broccoli florets",
-            "qty": "1 1/2 cups"
-          },
-          {
-            "name": "Fresh pineapple chunks",
-            "qty": "1 1/2 cups"
-          },
-          {
-            "name": "Persian cucumbers, chopped",
-            "qty": "4"
-          },
-          {
-            "name": "Cilantro, chopped",
-            "qty": "2 cups"
-          },
-          {
-            "name": "Thai basil, chopped",
-            "qty": "1/2 cup"
-          },
-          {
-            "name": "Green onions, chopped",
-            "qty": "1/4 cup"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Butter",
-            "qty": "2 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Pickled ginger (or 1 tbsp grated fresh ginger)",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Sweet Thai chili sauce",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Sesame seeds",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Lime juice",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Roasted peanuts, chopped",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Cooked rice",
-            "qty": "to serve"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Black pepper and chili flakes",
-            "qty": "to taste"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "cheeseburger-pasta",
-    "name": "One Pot Cheeseburger Pasta",
-    "site": "Budget Bytes",
-    "url": "https://www.budgetbytes.com/skillet-cheeseburger-pasta/",
-    "desc": "A fast homemade version of hamburger helper - beefy, cheesy pasta cooked all in one pot for easy cleanup.",
-    "tags": [
-      "one-pot",
-      "fakeaway"
-    ],
-    "servings": 4,
-    "added": "2026-06-20",
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1/2 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Yellow onion",
-            "qty": "1"
-          },
-          {
-            "name": "Green onions, sliced (optional)",
-            "qty": "2"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Cheddar cheese, shredded",
-            "qty": "4 oz"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "All-purpose flour",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Tomato sauce",
-            "qty": "1 can (8 oz)"
-          },
-          {
-            "name": "Beef broth",
-            "qty": "2 cups"
-          },
-          {
-            "name": "Hot dog relish (dill relish + mustard)",
-            "qty": "2 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Pasta shells, uncooked",
-            "qty": "1/2 lb"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "thai-basil-beef",
-    "name": "Thai Basil Beef and Lemongrass Rice Bowls",
-    "site": "Half Baked Harvest",
-    "url": "https://www.halfbakedharvest.com/20-minute-thai-basil-beef-lemongrass-rice-bowls/",
-    "desc": "Ground beef caramelized in a sweet Thai basil chili sauce over creamy lemongrass coconut rice, topped with a bright carrot-pepper salad. Ready in about 20 minutes.",
-    "tags": [
-      "one-pan",
-      "fakeaway",
-      "dairy-free"
-    ],
-    "servings": 4,
-    "added": "2026-06-20",
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Lean ground beef (or chicken or pork)",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Shredded carrots",
-            "qty": "1 cup"
-          },
-          {
-            "name": "Bell pepper, sliced",
-            "qty": "1"
-          },
-          {
-            "name": "Cherry tomatoes, halved",
-            "qty": "1/2 cup"
-          },
-          {
-            "name": "Green onions, chopped",
-            "qty": "4"
-          },
-          {
-            "name": "Garlic, chopped",
-            "qty": "4 cloves"
-          },
-          {
-            "name": "Fresh ginger, grated",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Lime juice",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Thai or sweet Italian basil, chopped",
-            "qty": "2 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Toasted sesame oil",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Rice vinegar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Fish sauce or tamari",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Honey",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Sweet Thai chili sauce",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Sesame seeds and peanuts, for serving",
-            "qty": "to taste"
-          },
-          {
-            "name": "Coconut milk",
-            "qty": "1 can (14 oz)"
-          },
-          {
-            "name": "Water",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Jasmine rice",
-            "qty": "1 1/2 cups"
-          },
-          {
-            "name": "Lemongrass paste",
-            "qty": "1 tbsp"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Black pepper",
-            "qty": "to taste"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "speedy-beef-teriyaki",
-    "name": "Speedy Beef Teriyaki",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/speedy-beef-teriyaki/",
-    "desc": "Ground beef simmered in a sticky homemade teriyaki sauce, served over rice with carrot, edamame, cabbage and a dollop of Kewpie mayo. On the table in under 20 minutes.",
-    "tags": [
-      "one-pan",
-      "fakeaway",
-      "dairy-free"
-    ],
-    "servings": 4,
-    "added": "2026-06-20",
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef (or chicken, turkey or pork)",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Onion, finely diced",
-            "qty": "1"
-          },
-          {
-            "name": "Garlic, minced",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Carrot, julienned",
-            "qty": "1"
-          },
-          {
-            "name": "Frozen edamame beans, thawed",
-            "qty": "1/2 cup"
-          },
-          {
-            "name": "Red cabbage, finely shredded",
-            "qty": "1/4 head"
-          },
-          {
-            "name": "Spring onion (scallion), sliced",
-            "qty": "1"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Teriyaki sauce (store-bought, or homemade below)",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Cornstarch",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Water",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Mirin",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Cooking sake",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "2 tsp"
-          },
-          {
-            "name": "Brown sugar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Sesame seeds",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Kewpie or whole-egg mayonnaise",
-            "qty": "4 tsp"
-          },
-          {
-            "name": "Steamed rice",
-            "qty": "to serve"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "sticky-beef-noodles",
-    "name": "Sticky Beef Noodles",
-    "site": "Simple Home Edit",
-    "url": "https://simplehomeedit.com/recipe/sticky-beef-noodles/",
-    "added": "2026-06-29",
-    "desc": "A 15-minute one-pan fakeaway — ground beef in a sticky garlic-ginger sweet chilli sauce tossed through egg noodles with veggies.",
-    "tags": [
-      "one-pan",
-      "fakeaway"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Garlic, minced",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Ginger, minced",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Frozen mixed vegetables (e.g. broccoli)",
-            "qty": "2 cups"
-          },
-          {
-            "name": "Spring onions, sliced",
-            "qty": "2"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Sweet chilli sauce",
-            "qty": "1/3 cup"
-          },
-          {
-            "name": "Brown sugar",
-            "qty": "1 tsp"
-          },
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "3 tbsp"
-          },
-          {
-            "name": "Dark soy sauce",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Rice wine vinegar",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Cornstarch",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Water",
-            "qty": "1/2 cup"
-          },
-          {
-            "name": "Chilli oil, to serve (optional)",
-            "qty": "to taste"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Thin egg noodles",
-            "qty": "9 oz"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "korean-beef-sesame-noodles",
-    "name": "Korean Beef Sesame Noodles",
-    "site": "Half Baked Harvest",
-    "url": "https://www.halfbakedharvest.com/korean-beef-sesame-noodles/",
-    "added": "2026-06-29",
-    "desc": "A 20-minute stir-fry — gluten-free rice noodles tossed in a sweet-spicy gochujang sauce with caramelized beef, shallots, and veggies.",
-    "tags": [
-      "one-pan",
-      "fakeaway",
-      "gluten-free"
-    ],
-    "servings": 4,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Flank steak (or chicken breast), thinly sliced",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Garlic, chopped",
-            "qty": "4 cloves"
-          },
-          {
-            "name": "Fresh ginger, chopped",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Mixed stir-fry vegetables",
-            "qty": "3 cups"
-          },
-          {
-            "name": "Shallots, sliced",
-            "qty": "3"
-          },
-          {
-            "name": "Fresh basil",
-            "qty": "1/2 cup"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Tamari or soy sauce",
-            "qty": "1/2 cup"
-          },
-          {
-            "name": "Honey",
-            "qty": "1/4 cup"
-          },
-          {
-            "name": "Rice vinegar",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Gochujang (Korean chili paste)",
-            "qty": "2-3 tbsp"
-          },
-          {
-            "name": "Toasted sesame oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Sesame oil",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Toasted sesame seeds",
-            "qty": "1/4 cup"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Brown rice noodles",
-            "qty": "8 oz"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "one-pot-chili-mac",
-    "name": "One Pot Chili Mac",
-    "site": "Budget Bytes",
-    "url": "https://www.budgetbytes.com/chili-cheese-beef-n-mac/",
-    "added": "2026-06-29",
-    "desc": "A grown-up homemade hamburger helper — rich, beefy, chili-spiced tomato sauce with tender macaroni and melty cheddar, all in one pot.",
-    "tags": [
-      "one-pot"
-    ],
-    "servings": 6,
-    "ingredients": [
-      {
-        "cat": "Meat",
-        "items": [
-          {
-            "name": "Ground beef",
-            "qty": "1 lb"
-          }
-        ]
-      },
-      {
-        "cat": "Produce",
-        "items": [
-          {
-            "name": "Yellow onion, diced",
-            "qty": "1"
-          },
-          {
-            "name": "Garlic cloves, minced",
-            "qty": "2"
-          }
-        ]
-      },
-      {
-        "cat": "Dairy",
-        "items": [
-          {
-            "name": "Cheddar cheese, shredded",
-            "qty": "1 cup"
-          }
-        ]
-      },
-      {
-        "cat": "Pantry",
-        "items": [
-          {
-            "name": "Olive oil",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "All-purpose flour",
-            "qty": "2 tbsp"
-          },
-          {
-            "name": "Tomato sauce",
-            "qty": "8 oz"
-          },
-          {
-            "name": "Beef broth",
-            "qty": "3 cups"
-          }
-        ]
-      },
-      {
-        "cat": "Spices",
-        "items": [
-          {
-            "name": "Chili powder",
-            "qty": "1 tbsp"
-          },
-          {
-            "name": "Smoked paprika",
-            "qty": "1/2 tsp"
-          },
-          {
-            "name": "Garlic powder",
-            "qty": "1/2 tsp"
-          },
-          {
-            "name": "Dried oregano",
-            "qty": "1/2 tsp"
-          }
-        ]
-      },
-      {
-        "cat": "Noodles & Pasta",
-        "items": [
-          {
-            "name": "Uncooked macaroni (about 2 cups)",
-            "qty": "1/2 lb"
-          }
-        ]
-      }
+    id:"chicken-ramen",name:"Chicken & Broccoli Ramen",site:"Simple Home Edit",
+    url:"https://simplehomeedit.com/recipe/one-pan-chicken-and-broccoli-ramen-noodles/",
+    desc:"Chicken thighs with broccoli and ramen noodles in a honey-soy glaze. All in one pan.",
+    tags:["one-pan","dairy-free"],servings:4,
+    ingredients:[
+      {cat:"Meat",items:[{name:"Boneless skinless chicken thighs, diced",qty:"1 lb"}]},
+      {cat:"Produce",items:[{name:"Scallions",qty:"2"},{name:"Garlic, minced",qty:"2 tsp"},{name:"Fresh ginger, minced",qty:"2 tsp"},{name:"Broccoli, large head",qty:"1"}]},
+      {cat:"Pantry",items:[{name:"Olive oil",qty:"1 tbsp"},{name:"Honey",qty:"¼ cup"},{name:"Dark soy sauce",qty:"2 tbsp"},{name:"Oyster sauce",qty:"2 tbsp"},{name:"Mirin",qty:"2 tbsp"},{name:"Ketchup",qty:"1 tbsp"},{name:"Sesame oil",qty:"2 tsp"},{name:"Sesame seeds",qty:"1 tbsp"},{name:"Chilli oil crisp (optional)",qty:"to taste"}]},
+      {cat:"Spices",items:[{name:"Black pepper",qty:"¼ tsp"}]},
+      {cat:"Noodles & Pasta",items:[{name:"Ramen noodle packets (discard seasoning)",qty:"4 x 3 oz"}]}
     ]
   }
 ];
-
-/* ── Recipe sources (canonical list the weekly scraper reads) ── */
-const SOURCES = [
-  {id:"simple-home-edit",name:"Simple Home Edit",url:"https://simplehomeedit.com",notes:"fakeaway, one-pan, one-pot, ground beef",active:true},
-  {id:"budget-bytes",name:"Budget Bytes",url:"https://www.budgetbytes.com",notes:"one-pot meals, easy ground beef, budget comfort",active:true},
-  {id:"half-baked-harvest",name:"Half Baked Harvest",url:"https://www.halfbakedharvest.com",notes:"beef recipes, bold Asian fakeaway, one-pan dinners",active:true}
-];
-// Set these after deploying the sources-sync Worker (see /worker) to enable auto-sync.
-const SOURCES_SYNC_URL = "";
-const SOURCES_SYNC_KEY = "";
-async function loadRemoteSources(){
-  try{
-    const r = await fetch('sources.json', {cache:'no-store'});
-    if(r.ok){ const j = await r.json(); if(Array.isArray(j)&&j.length){ persistSources(j); if(document.getElementById('sources-modal')){ sourcesDraft = j.map(x=>({...x})); renderSourcesModal(); } } }
-  }catch(e){}
-}
-function getSources(){ try{ const s=JSON.parse(localStorage.getItem('mealPlannerSources')); if(Array.isArray(s)&&s.length) return s; }catch(e){} return SOURCES.map(x=>({...x})); }
-function persistSources(list){ localStorage.setItem('mealPlannerSources', JSON.stringify(list)); }
-function srcSlug(s){ return (String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')) || ('src-'+Date.now()); }
-function srcEscAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-let sourcesDraft = null;
-function openSourcesModal(){ sourcesDraft = getSources().map(x=>({...x})); renderSourcesModal(); }
-function closeSourcesModal(){ sourcesDraft=null; const m=document.getElementById('sources-modal'); if(m) m.remove(); }
-function renderSourcesModal(){
-  const old=document.getElementById('sources-modal'); if(old) old.remove();
-  let h='<div class="modal-overlay" id="sources-modal" onclick="if(event.target===this)closeSourcesModal()">';
-  h+='<div class="modal" style="max-height:88vh">';
-  h+='<div class="detail-header"><h3>Recipe sources</h3><button class="detail-close" onclick="closeSourcesModal()">&times;</button></div>';
-  h+='<p class="modal-sub">The Saturday recipe finder pulls new meals from the active sites below.</p>';
-  sourcesDraft.forEach((s,i)=>{
-    h+='<div class="src-row">';
-    h+='<label class="src-toggle"><input type="checkbox" '+(s.active?'checked':'')+' onchange="srcToggle('+i+')"> <span>'+(s.active?'Active':'Off')+'</span></label>';
-    h+='<button class="src-del" onclick="srcDelete('+i+')">Remove</button>';
-    h+='<input class="src-input" value="'+srcEscAttr(s.name)+'" placeholder="Site name" oninput="srcEdit('+i+',\'name\',this.value)">';
-    h+='<input class="src-input" value="'+srcEscAttr(s.url)+'" placeholder="https://..." oninput="srcEdit('+i+',\'url\',this.value)">';
-    h+='<input class="src-input" value="'+srcEscAttr(s.notes)+'" placeholder="What to look for (categories, keywords)" oninput="srcEdit('+i+',\'notes\',this.value)">';
-    h+='</div>';
-  });
-  h+='<button class="btn-outline" style="width:100%;margin-top:8px" onclick="srcAdd()">+ Add a source</button>';
-  h+='<div class="list-actions" style="margin-top:14px"><button class="btn btn-add" style="flex:1" onclick="srcSave()">Save sources</button><button class="btn-outline" onclick="srcCopy()">Copy list</button></div>';
-  h+='<p class="modal-sub" style="margin-top:10px;font-size:12px">'+(SOURCES_SYNC_URL ? 'Saved changes sync automatically to the weekly recipe finder.' : 'Edits are saved on this device. To apply them to the automatic weekly run, use \'Copy list\' and share it with Claude.')+'</p>';
-  h+='<button class="modal-cancel" onclick="closeSourcesModal()">Close</button>';
-  h+='</div></div>';
-  document.body.insertAdjacentHTML('beforeend', h);
-}
-function srcToggle(i){ sourcesDraft[i].active=!sourcesDraft[i].active; renderSourcesModal(); }
-function srcEdit(i,f,v){ sourcesDraft[i][f]=v; if(f==='name') sourcesDraft[i].id=srcSlug(v); }
-function srcDelete(i){ sourcesDraft.splice(i,1); renderSourcesModal(); }
-function srcAdd(){ sourcesDraft.push({id:'src-'+Date.now(),name:'',url:'',notes:'',active:true}); renderSourcesModal(); }
-async function srcSave(){
-  const clean=sourcesDraft.filter(s=>(s.name||'').trim()||(s.url||'').trim());
-  clean.forEach(s=>{ if(!s.id) s.id=srcSlug(s.name); });
-  persistSources(clean);
-  if(SOURCES_SYNC_URL){
-    try{
-      const headers={'Content-Type':'application/json'};
-      if(SOURCES_SYNC_KEY) headers['X-App-Key']=SOURCES_SYNC_KEY;
-      const r=await fetch(SOURCES_SYNC_URL,{method:'POST',headers,body:JSON.stringify({sources:clean})});
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      closeSourcesModal();
-      alert('Sources saved and synced — the weekly recipe finder will use them.');
-    }catch(e){
-      alert('Saved on this device, but syncing to the recipe finder failed ('+e.message+'). Try Save again, or use Copy list.');
-    }
-  } else {
-    closeSourcesModal();
-  }
-  render();
-}
-function srcCopy(){ const txt=JSON.stringify(sourcesDraft.filter(s=>s.active).map(s=>({name:s.name,url:s.url,notes:s.notes})),null,2); if(navigator.clipboard) navigator.clipboard.writeText(txt); alert('Active sources copied to clipboard. Share this with Claude (or your weekly task) to apply it to the automatic run.'); }
 
 /* ── State management with Supabase sync ── */
-let state = { selected: {}, checked: {}, favorites: [], calendar: {}, customRecipes: [] };
+let state = { selected: [], checked: {}, favorites: [], calendar: {}, customRecipes: [] };
 
 // Load from localStorage first for instant render
 const cached = localStorage.getItem('mealPlannerState');
 if (cached) {
   try {
     const parsed = JSON.parse(cached);
-    state = { selected: migrateSelected(parsed.selected), checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {}, customRecipes: parsed.customRecipes || [] };
+    state = { selected: parsed.selected || [], checked: parsed.checked || {}, favorites: parsed.favorites || [], calendar: parsed.calendar || {}, customRecipes: parsed.customRecipes || [] };
   } catch(e) {}
 }
 
-function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function weekKeyOfDate(d){ const m=new Date(d); m.setHours(12,0,0,0); m.setDate(m.getDate()-(m.getDay()===0?6:m.getDay()-1)); return ymd(m); }
-function weekKeyForOffset(offset){ return weekKeyOfDate(getWeekDates(offset)[0]); }
-function curWeekKey(){ return weekKeyForOffset(0); }
-function planFor(offset){ return state.selected[weekKeyForOffset(offset)] || []; }
-function migrateSelected(sel){ if(Array.isArray(sel)) return sel.length ? {[curWeekKey()]: sel.slice()} : {}; return (sel && typeof sel==='object') ? sel : {}; }
-function prunePlan(){ const cut=weekKeyForOffset(-8); Object.keys(state.selected).forEach(wk=>{ if(wk<cut) delete state.selected[wk]; }); }
-prunePlan();
-
 function getAllRecipes() { return [...RECIPES, ...state.customRecipes]; }
-function isNewRecipe(r) {
-  if (!r.added) return false;
-  const days = (Date.now() - new Date(r.added + "T00:00:00")) / 86400000;
-  return days >= 0 && days <= 7;
-}
 
 function setSyncStatus(status) {
   const el = document.getElementById('sync-status');
@@ -2255,7 +409,7 @@ async function loadFromSupabase() {
     const { data, error } = await sb.from('meal_state').select('*').eq('id', 1).single();
     if (error) throw error;
     if (data) {
-      state.selected = migrateSelected(data.selected); prunePlan();
+      state.selected = data.selected || [];
       state.checked = data.checked || {};
       state.favorites = data.favorites || [];
       state.calendar = data.calendar || {};
@@ -2306,7 +460,7 @@ sb.channel('meal_state_changes')
     if (saving) return; // ignore our own writes
     const data = payload.new;
     if (data) {
-      state.selected = migrateSelected(data.selected); prunePlan();
+      state.selected = data.selected || [];
       state.checked = data.checked || {};
       state.favorites = data.favorites || [];
       state.calendar = data.calendar || {};
@@ -2324,31 +478,35 @@ sb.channel('meal_state_changes')
 
 // Initial load from Supabase
 loadFromSupabase();
-loadRemoteSources();
 
 /* ── App logic ── */
 
 function showView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const views = ['browse','list','calendar'];
+  const views = ['browse','favorites','calendar','list'];
   document.getElementById(view+'-view').classList.add('active');
   document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
+  // Sync shop week to calendar week
+  if (view === 'list') shopWeekOffset = calWeekOffset;
   render();
 }
 
-function toggleMeal(id, offset) {
-  const wk = weekKeyForOffset(offset || 0);
-  const arr = state.selected[wk] || (state.selected[wk] = []);
-  const idx = arr.indexOf(id);
+function toggleMeal(id) {
+  const idx = state.selected.indexOf(id);
   if (idx === -1) {
-    arr.push(id);
+    state.selected.push(id);
   } else {
-    arr.splice(idx, 1);
+    state.selected.splice(idx, 1);
+    // Clean up checked items
     Object.keys(state.checked).forEach(k => {
       if (k.startsWith(id+'|')) delete state.checked[k];
     });
-    if (arr.length === 0) delete state.selected[wk];
+    // Clean up calendar entries
+    Object.keys(state.calendar).forEach(dk => {
+      state.calendar[dk] = state.calendar[dk].filter(mid => mid !== id);
+      if (state.calendar[dk].length === 0) delete state.calendar[dk];
+    });
   }
   save();
   render();
@@ -2381,6 +539,7 @@ function uncheckAll() {
 let calWeekOffset = 0;
 let shopWeekOffset = 0;
 let pickerDate = null;
+let browseSearch = '';
 
 function getWeekDates(offset) {
   const now = new Date();
@@ -2433,9 +592,8 @@ function renderPicker() {
   const dayMeals = state.calendar[pickerDate] || [];
   const d = new Date(pickerDate + 'T12:00:00');
   // Show approved meals first, then unapproved
-  const pickPlan = state.selected[weekKeyOfDate(d)] || [];
-  const approvedRecipes = getAllRecipes().filter(r => pickPlan.includes(r.id));
-  const otherRecipes = getAllRecipes().filter(r => !pickPlan.includes(r.id));
+  const approvedRecipes = getAllRecipes().filter(r => state.selected.includes(r.id));
+  const otherRecipes = getAllRecipes().filter(r => !state.selected.includes(r.id));
   let h = '<div class="modal-overlay" id="meal-picker-modal" onclick="if(event.target===this)closePicker()">';
   h += '<div class="modal">';
   h += '<h3>Add meal to ' + dayName(d) + '</h3>';
@@ -2475,9 +633,7 @@ function addMealToDay(dateStr, mealId) {
 }
 
 function addMealToDayAndSelect(dateStr, mealId) {
-  const wk = weekKeyOfDate(new Date(dateStr + 'T12:00:00'));
-  const arr = state.selected[wk] || (state.selected[wk] = []);
-  if (!arr.includes(mealId)) arr.push(mealId);
+  if (!state.selected.includes(mealId)) state.selected.push(mealId);
   addMealToDay(dateStr, mealId);
 }
 
@@ -2546,6 +702,9 @@ function openRecipeDetail(mealId) {
     });
   });
   h += '<a class="detail-source" href="' + r.url + '" target="_blank">View full recipe on ' + r.site + ' &#8599;</a>';
+  if (r.custom) {
+    h += '<button class="modal-cancel" onclick="if(confirm(\'Delete this imported recipe?\')){deleteCustomRecipe(\'' + r.id + '\');closeRecipeDetail()}" style="color:#c0392b;margin-top:8px;border:1px solid #c0392b">Delete imported recipe</button>';
+  }
   h += '<button class="modal-cancel" onclick="closeRecipeDetail()">Close</button>';
   h += '</div></div>';
   document.body.insertAdjacentHTML('beforeend', h);
@@ -2562,8 +721,6 @@ function getMealsForWeek(offset) {
   dates.forEach(d => {
     (state.calendar[dateKey(d)]||[]).forEach(id => ids.add(id));
   });
-  // include this week's plan meals (whether or not assigned to a day)
-  planFor(offset).forEach(id => ids.add(id));
   return [...ids];
 }
 
@@ -2572,7 +729,7 @@ function changeShopWeek(dir) { shopWeekOffset += dir; render(); }
 function getShoppingList(mealIds) {
   const catOrder = ['Meat','Produce','Dairy','Pantry','Spices','Noodles & Pasta'];
   const groups = {};
-  const ids = mealIds || [];
+  const ids = mealIds || state.selected;
 
   ids.forEach(id => {
     const r = getAllRecipes().find(r => r.id === id);
@@ -2623,39 +780,53 @@ function getShoppingList(mealIds) {
 
 function render() {
   const browseEl = document.getElementById('browse-view');
+  const favEl = document.getElementById('favorites-view');
   const listEl = document.getElementById('list-view');
 
   document.getElementById('browse-count').textContent = getAllRecipes().length;
-  document.getElementById('meals-count').textContent = planFor(0).length;
+  document.getElementById('meals-count').textContent = state.selected.length;
+  document.getElementById('fav-count').textContent = state.favorites.length;
 
-  // Browse view (current week's plan)
-  const curPlan = planFor(0);
-  const inPlan = getAllRecipes().filter(r => curPlan.includes(r.id));
-  const rest = getAllRecipes().filter(r => !curPlan.includes(r.id));
-  const newOnes = rest.filter(isNewRecipe);
-  const afterNew = rest.filter(r => !isNewRecipe(r));
-  const favs = afterNew.filter(r => state.favorites.includes(r.id));
-  const available = afterNew.filter(r => !state.favorites.includes(r.id));
+  // Browse view with search
+  const allR = getAllRecipes();
+  const q = browseSearch.toLowerCase();
+  const filtered = q ? allR.filter(r => r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)) || (r.site && r.site.toLowerCase().includes(q))) : allR;
+  const approved = filtered.filter(r => state.selected.includes(r.id));
+  const available = filtered.filter(r => !state.selected.includes(r.id));
 
-  let browseHTML = '';
-  if (inPlan.length > 0) {
-    browseHTML += '<div class="section-label">Your plan (' + inPlan.length + ')</div>';
-    inPlan.forEach(r => { browseHTML += renderCard(r, true); });
-  }
-  if (newOnes.length > 0) {
-    browseHTML += '<div class="section-label">&#10024; New this week (' + newOnes.length + ')</div>';
-    newOnes.forEach(r => { browseHTML += renderCard(r, false); });
-  }
-  if (favs.length > 0) {
-    browseHTML += '<div class="section-label">&#9733; Favorites (' + favs.length + ')</div>';
-    favs.forEach(r => { browseHTML += renderCard(r, false); });
-  }
-  if (available.length > 0) {
-    browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
-    available.forEach(r => { browseHTML += renderCard(r, false); });
+  let browseHTML = '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
+  browseHTML += '<input class="search-input" type="text" placeholder="Search recipes..." value="' + browseSearch.replace(/"/g,'&quot;') + '" oninput="browseSearch=this.value;render()" id="browse-search">';
+  if (browseSearch) browseHTML += '<button class="search-clear" onclick="browseSearch=\'\';render()">&times;</button>';
+  browseHTML += '</div>';
+  if (filtered.length === 0 && q) {
+    browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match "' + browseSearch + '"</p></div>';
+  } else {
+    if (approved.length > 0) {
+      browseHTML += '<div class="section-label">My Meals (' + approved.length + ')</div>';
+      approved.forEach(r => { browseHTML += renderCard(r, true); });
+    }
+    if (available.length > 0) {
+      browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
+      available.forEach(r => { browseHTML += renderCard(r, false); });
+    }
   }
   browseEl.innerHTML = browseHTML;
+  // Restore cursor position in search
+  const si = document.getElementById('browse-search');
+  if (si && document.activeElement !== si && q) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
 
+  // Favorites view
+  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
+  if (favRecipes.length === 0) {
+    favEl.innerHTML = '<div class="empty"><div class="icon">&#11088;</div><p>No favorites yet.<br>Star recipes you love to save them here.</p></div>';
+  } else {
+    let favHTML = '<div class="fav-banner">&#11088; Your starred recipes — tap the star on any meal to save it here for easy access.</div>';
+    favRecipes.forEach(r => {
+      const isSelected = state.selected.includes(r.id);
+      favHTML += renderCard(r, isSelected);
+    });
+    favEl.innerHTML = favHTML;
+  }
 
   // Calendar view
   const calEl = document.getElementById('calendar-view');
@@ -2665,7 +836,7 @@ function render() {
   calHTML += '<h2>' + fmtDate(weekDates[0]) + ' — ' + fmtDate(weekDates[6]) + '</h2>';
   calHTML += '<button class="cal-nav-btn" onclick="changeWeek(1)">Next &rarr;</button>';
   calHTML += '</div>';
-  if (getMealsForWeek(calWeekOffset).length === 0) {
+  if (state.selected.length === 0) {
     calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>Add meals from the Browse tab first,<br>then assign them to days here.</p></div>';
   } else {
     // Unassigned meals inbox — meals selected but not on any day this week
@@ -2673,7 +844,7 @@ function render() {
     weekDates.forEach(d => {
       (state.calendar[dateKey(d)]||[]).forEach(id => assignedThisWeek.add(id));
     });
-    const unassigned = planFor(calWeekOffset).filter(id => !assignedThisWeek.has(id)).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
+    const unassigned = state.selected.filter(id => !assignedThisWeek.has(id)).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
     if (unassigned.length > 0) {
       calHTML += '<div class="inbox-section">';
       calHTML += '<div class="inbox-label">&#128229; Unassigned (' + unassigned.length + ')</div>';
@@ -2682,7 +853,7 @@ function render() {
         calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
         calHTML += '<div class="inbox-meal-actions">';
         calHTML += '<button class="inbox-assign-btn" onclick="openInboxAssign(\'' + r.id + '\')">Assign</button>';
-        calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\',' + calWeekOffset + ')" title="Remove meal">&times;</button>';
+        calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\')" title="Remove meal">&times;</button>';
         calHTML += '</div></div>';
       });
       calHTML += '</div>';
@@ -2720,7 +891,7 @@ function render() {
   shopHeader += '</div>';
 
   if (shopMealIds.length === 0) {
-    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>Nothing to shop for yet.<br>Pick recipes from Browse to build your plan.</p></div>';
+    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Assign meals in the Calendar tab first.</p></div>';
     document.getElementById('list-count').textContent = '0';
   } else {
     let totalItems = 0;
@@ -2794,7 +965,6 @@ function renderCard(r, isSelected) {
   html += '<div class="card-header"><div class="card-title-row"><div>';
   html += '<h3 onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</h3>';
   html += '<div class="tags">';
-  if (isNewRecipe(r)) html += '<span class="tag tag-new">NEW</span>';
   r.tags.forEach(t => {
     if (t==='dairy-free') html += '<span class="tag tag-df">DF</span>';
     else if (t==='gluten-free') html += '<span class="tag tag-gf">GF</span>';
@@ -2826,9 +996,9 @@ function getWeekKey(d) {
 }
 
 // Saturday notification
-function checkPlanNotification() {
+function checkSaturdayNotification() {
   const now = new Date();
-  if (now.getDay() !== 0) return; // Sunday only
+  if (now.getDay() !== 6) return;
   const wk = 'planDismissed_' + getWeekKey(now);
   if (localStorage.getItem(wk)) return;
   const el = document.getElementById('plan-notification');
@@ -2881,7 +1051,7 @@ function closeWeekPicker() {
 
 function selectWeekAndPlan(offset) {
   wizardWeekOffset = offset;
-  wizardPicked = [...planFor(offset)];
+  wizardPicked = [...state.selected];
   closeWeekPicker();
   renderWizard();
 }
@@ -2898,45 +1068,38 @@ function renderWizard() {
   h += '<button class="wizard-close" onclick="closeWizard()">&times;</button></div>';
   h += '<div class="wizard-body">';
   h += '<div class="wizard-step">Step 1 of 2 &middot; Choose Recipes</div>';
-  h += '<p class="wizard-hint">Tap recipes to add them to your plan. You\'ll see your shopping list next, then pick days in the calendar.</p>';
+  h += '<p class="wizard-hint">Tap recipes to add them to your plan. You\'ll assign them to specific days next.</p>';
 
   // Show favorites first if any
-  const newRecipes = getAllRecipes().filter(isNewRecipe);
-  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id) && !isNewRecipe(r));
-  const otherRecipes = getAllRecipes().filter(r => !state.favorites.includes(r.id) && !isNewRecipe(r));
+  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
+  const otherRecipes = getAllRecipes().filter(r => !state.favorites.includes(r.id));
+  const ordered = [...favRecipes, ...otherRecipes];
 
-  const renderWizardRecipe = (r) => {
-    const isPicked = wizardPicked.includes(r.id);
-    let s = '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
-    s += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + r.name + (isNewRecipe(r) ? ' <span class="tag tag-new">NEW</span>' : '') + '</div>';
-    s += '<div class="wizard-recipe-meta">';
-    r.tags.forEach(t => { s += t + ' · '; });
-    s += 'serves ' + r.servings + '</div></div>';
-    s += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
-    s += '</div>';
-    return s;
-  };
-
-  if (newRecipes.length > 0) {
-    h += '<div class="section-label" style="padding-top:8px">&#10024; New this week</div>';
-    newRecipes.forEach(r => { h += renderWizardRecipe(r); });
-  }
   if (favRecipes.length > 0) {
     h += '<div class="section-label" style="padding-top:8px">&#9733; Favorites</div>';
-    favRecipes.forEach(r => { h += renderWizardRecipe(r); });
   }
-  if (otherRecipes.length > 0) {
-    h += '<div class="section-label" style="padding-top:8px">All Recipes</div>';
-    otherRecipes.forEach(r => { h += renderWizardRecipe(r); });
-  }
+
+  ordered.forEach((r, idx) => {
+    if (favRecipes.length > 0 && idx === favRecipes.length) {
+      h += '<div class="section-label" style="padding-top:8px">All Recipes</div>';
+    }
+    const isPicked = wizardPicked.includes(r.id);
+    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
+    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + r.name + '</div>';
+    h += '<div class="wizard-recipe-meta">';
+    r.tags.forEach(t => { h += t + ' · '; });
+    h += 'serves ' + r.servings + '</div></div>';
+    h += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
+    h += '</div>';
+  });
 
   h += '</div>';
   h += '<div class="wizard-footer">';
-  h += '<div class="wizard-count' + (wizardPicked.length>=5?' wizard-count-full':'') + '">' + wizardPicked.length + ' of 5 meals selected</div>';
+  h += '<div class="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' selected</div>';
   if (wizardPicked.length > 0) {
-    h += '<button class="btn btn-add" onclick="wizardContinue()">View shopping list &#8250;</button>';
+    h += '<button class="btn btn-add" onclick="wizardContinue()">Next: Assign days &#8250;</button>';
   } else {
-    h += '<button class="btn btn-add" style="opacity:0.4;cursor:default">View shopping list &#8250;</button>';
+    h += '<button class="btn btn-add" style="opacity:0.4;cursor:default">Next: Assign days &#8250;</button>';
   }
   h += '</div></div>';
 
@@ -2955,19 +1118,164 @@ function closeWizard() {
   if (el) el.remove();
 }
 
+let wizardAssignments = {}; // { dateKey: [mealId, ...] }
+
 function wizardContinue() {
   if (wizardPicked.length === 0) return;
-  // Save the picks as this chosen week's plan
-  const wk = weekKeyForOffset(wizardWeekOffset);
-  if (wizardPicked.length > 0) state.selected[wk] = [...wizardPicked];
-  else delete state.selected[wk];
+  // Initialize assignments from existing calendar for this week
+  const dates = getWeekDates(wizardWeekOffset);
+  wizardAssignments = {};
+  dates.forEach(d => {
+    const dk = dateKey(d);
+    wizardAssignments[dk] = [...(state.calendar[dk] || [])];
+  });
+  renderWizardStep2();
+}
+
+function renderWizardStep2() {
+  const old = document.getElementById('planning-wizard');
+  if (old) old.remove();
+  const dates = getWeekDates(wizardWeekOffset);
+  const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
+
+  // Find unassigned meals from wizard picks
+  const assignedIds = new Set();
+  Object.values(wizardAssignments).forEach(ids => ids.forEach(id => assignedIds.add(id)));
+  const unassigned = wizardPicked.filter(id => !assignedIds.has(id));
+
+  let h = '<div class="wizard-overlay" id="planning-wizard">';
+  h += '<div class="wizard-header"><h2>Plan: ' + weekLabel + '</h2>';
+  h += '<button class="wizard-close" onclick="closeWizard()">&times;</button></div>';
+  h += '<div class="wizard-body">';
+  h += '<div class="wizard-step">Step 2 of 2 &middot; Assign to Days</div>';
+  h += '<p class="wizard-hint">Tap an unassigned meal, then tap a day to place it. Or tap + on any day.</p>';
+
+  // Unassigned chips
+  if (unassigned.length > 0) {
+    h += '<div class="wizard-unassigned">';
+    h += '<div class="wizard-unassigned-label">' + unassigned.length + ' to assign</div>';
+    unassigned.forEach(id => {
+      const r = getAllRecipes().find(r => r.id === id);
+      if (!r) return;
+      h += '<span class="wizard-ua-chip" onclick="wizardQuickAssign(\'' + id + '\')">' + r.name + '</span>';
+    });
+    h += '</div>';
+  }
+
+  // Day rows
+  dates.forEach(d => {
+    const dk = dateKey(d);
+    const today = isToday(d);
+    const meals = (wizardAssignments[dk] || []).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
+    h += '<div class="wizard-day">';
+    h += '<div class="wizard-day-header"><span>' + dayName(d) + (today ? ' · Today' : '') + '</span><span class="wd-date">' + fmtDate(d) + '</span></div>';
+    h += '<div class="wizard-day-meals">';
+    meals.forEach(r => {
+      h += '<div class="wizard-day-meal"><span>' + r.name + '</span>';
+      h += '<button class="wdm-remove" onclick="wizardUnassign(\'' + dk + '\',\'' + r.id + '\')">&times;</button></div>';
+    });
+    h += '<button class="btn-add-meal" onclick="wizardPickForDay(\'' + dk + '\')">+ Add meal</button>';
+    h += '</div></div>';
+  });
+
+  h += '</div>';
+  h += '<div class="wizard-footer">';
+  h += '<button class="btn btn-remove" onclick="wizardBackToStep1()">&#8249; Back</button>';
+  const totalAssigned = Object.values(wizardAssignments).reduce((s, a) => s + a.length, 0);
+  h += '<div class="wizard-count">' + totalAssigned + ' meal' + (totalAssigned !== 1 ? 's' : '') + ' assigned</div>';
+  h += '<button class="btn btn-add" onclick="wizardFinish()">Done &#10003;</button>';
+  h += '</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function wizardBackToStep1() {
+  closeWizard();
+  renderWizard();
+}
+
+function wizardQuickAssign(mealId) {
+  // Show a mini day picker for this meal
+  const old = document.getElementById('wizard-daypick-modal');
+  if (old) old.remove();
+  const dates = getWeekDates(wizardWeekOffset);
+  const r = getAllRecipes().find(r => r.id === mealId);
+  if (!r) return;
+  let h = '<div class="modal-overlay" id="wizard-daypick-modal" onclick="if(event.target===this)this.remove()">';
+  h += '<div class="modal">';
+  h += '<h3>Assign ' + r.name + '</h3>';
+  h += '<p class="modal-sub">Pick a day</p>';
+  dates.forEach(d => {
+    const dk = dateKey(d);
+    const today = isToday(d);
+    const existing = (wizardAssignments[dk] || []).length;
+    h += '<div class="modal-meal" onclick="wizardAssignToDay(\'' + dk + '\',\'' + mealId + '\')">';
+    h += '<div class="modal-meal-info"><div class="modal-meal-name">' + dayName(d) + (today ? ' · Today' : '') + '</div>';
+    h += '<div class="modal-meal-tags">' + fmtDate(d) + (existing ? ' · ' + existing + ' meal' + (existing !== 1 ? 's' : '') : '') + '</div></div>';
+    h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
+    h += '</div>';
+  });
+  h += '<button class="modal-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function wizardAssignToDay(dk, mealId) {
+  if (!wizardAssignments[dk]) wizardAssignments[dk] = [];
+  if (!wizardAssignments[dk].includes(mealId)) wizardAssignments[dk].push(mealId);
+  const modal = document.getElementById('wizard-daypick-modal');
+  if (modal) modal.remove();
+  renderWizardStep2();
+}
+
+function wizardUnassign(dk, mealId) {
+  if (!wizardAssignments[dk]) return;
+  wizardAssignments[dk] = wizardAssignments[dk].filter(id => id !== mealId);
+  renderWizardStep2();
+}
+
+function wizardPickForDay(dk) {
+  // Show recipe picker for a specific day
+  const old = document.getElementById('wizard-daypick-modal');
+  if (old) old.remove();
+  const d = new Date(dk + 'T12:00:00');
+  const dayMeals = wizardAssignments[dk] || [];
+  let h = '<div class="modal-overlay" id="wizard-daypick-modal" onclick="if(event.target===this)this.remove()">';
+  h += '<div class="modal">';
+  h += '<h3>Add meal to ' + dayName(d) + '</h3>';
+  h += '<p class="modal-sub">' + fmtDate(d) + '</p>';
+  wizardPicked.forEach(id => {
+    const r = getAllRecipes().find(r => r.id === id);
+    if (!r) return;
+    const added = dayMeals.includes(id);
+    h += '<div class="modal-meal' + (added ? ' added' : '') + '" ' + (added ? '' : 'onclick="wizardAssignToDay(\'' + dk + '\',\'' + id + '\')"') + '>';
+    h += '<div class="modal-meal-info"><div class="modal-meal-name">' + r.name + '</div>';
+    h += '<div class="modal-meal-tags">serves ' + r.servings + (added ? ' · already added' : '') + '</div></div>';
+    if (!added) h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
+    h += '</div>';
+  });
+  h += '<button class="modal-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>';
+  h += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function wizardFinish() {
+  // Merge wizard picks into state.selected
+  wizardPicked.forEach(id => {
+    if (!state.selected.includes(id)) state.selected.push(id);
+  });
+  // Apply assignments to calendar
+  const dates = getWeekDates(wizardWeekOffset);
+  dates.forEach(d => {
+    const dk = dateKey(d);
+    if (wizardAssignments[dk] && wizardAssignments[dk].length > 0) {
+      state.calendar[dk] = wizardAssignments[dk];
+    }
+  });
   save();
   closeWizard();
-
-  // Show the shopping list for the chosen week; calendar (day assignment) comes after
-  shopWeekOffset = wizardWeekOffset;
   calWeekOffset = wizardWeekOffset;
-  showView('list');
+  showView('calendar');
 }
 
 /* ── Recipe import from URL ── */
@@ -3152,6 +1460,22 @@ function confirmImport(recipe) {
   render();
 }
 
+function deleteCustomRecipe(id) {
+  state.customRecipes = state.customRecipes.filter(r => r.id !== id);
+  // Also remove from selected, favorites, and calendar
+  state.selected = state.selected.filter(sid => sid !== id);
+  state.favorites = state.favorites.filter(fid => fid !== id);
+  Object.keys(state.calendar).forEach(dk => {
+    state.calendar[dk] = state.calendar[dk].filter(mid => mid !== id);
+    if (state.calendar[dk].length === 0) delete state.calendar[dk];
+  });
+  Object.keys(state.checked).forEach(k => {
+    if (k.startsWith(id + '|')) delete state.checked[k];
+  });
+  save();
+  render();
+}
+
 /* ── Copy shopping list (name-first for DoorDash/Instacart) ── */
 function copyShoppingList() {
   const shopMealIds = getMealsForWeek(shopWeekOffset);
@@ -3185,7 +1509,7 @@ function copyShoppingList() {
   });
 }
 
-checkPlanNotification();
+checkSaturdayNotification();
 render();
 </script>
 </body>
