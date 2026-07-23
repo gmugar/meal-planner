@@ -242,6 +242,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .toast-undo{background:none;border:1px solid rgba(255,255,255,0.3);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer}
 .toast-undo:active{background:rgba(255,255,255,0.15)}
+/* Inbox / Discover */
+.inbox-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.inbox-grid{grid-template-columns:1fr}}
+.inbox-card{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);transition:transform 0.15s}
+.inbox-card:active{transform:scale(0.98)}
+.inbox-card-img{width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--bg)}
+.inbox-card-body{padding:10px 12px}
+.inbox-card-name{font-size:14px;font-weight:500;line-height:1.3;margin-bottom:4px}
+.inbox-card-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.inbox-card-actions{display:flex;gap:6px}
+.inbox-card-add{flex:1;padding:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer}
+.inbox-card-add:active{opacity:0.85}
+.inbox-card-add:disabled{opacity:0.4;cursor:default}
+.inbox-card-skip{padding:6px 10px;background:var(--bg);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer}
+.inbox-card-skip:active{background:var(--border)}
+.inbox-filters{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.inbox-filter{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.inbox-filter.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.inbox-filter:active{transform:scale(0.95)}
+.inbox-loading{text-align:center;padding:40px 20px;color:var(--muted)}
+.inbox-loading .spinner{width:24px;height:24px;margin:0 auto 12px}
+/* Hidden recipes */
+.hidden-toggle{text-align:center;padding:12px;margin-top:8px}
+.hidden-toggle button{background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer}
+.hidden-toggle button:active{background:var(--bg)}
+.card.hidden-card{opacity:0.5}
+.btn-hide{background:none;border:none;font-size:16px;cursor:pointer;padding:4px;line-height:1;color:var(--border);transition:all 0.15s}
+.btn-hide:hover{color:var(--muted)}
+.btn-hide:active{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -256,13 +285,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="plan-notification"></div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">10</span></button>
+  <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">0</span></button>
+  <button class="tab" onclick="showView('inbox')"><span class="tab-icon">&#128229;</span>Inbox<span class="badge" id="inbox-count"></span></button>
   <button class="tab" onclick="showView('favorites')"><span class="tab-icon">&#9733;</span>Favs<span class="badge" id="fav-count">0</span></button>
   <button class="tab" onclick="showView('calendar')"><span class="tab-icon">&#128197;</span>Calendar<span class="badge" id="meals-count">0</span></button>
   <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
 </div>
 
 <div id="browse-view" class="view active"></div>
+<div id="inbox-view" class="view"></div>
 <div id="favorites-view" class="view"></div>
 <div id="calendar-view" class="view"></div>
 <div id="list-view" class="view"></div>
@@ -408,20 +439,31 @@ const RECIPES = [
 ];
 
 /* ── State management with Supabase sync ── */
-let state = { selected: [], checked: {}, favorites: [], calendar: {}, customRecipes: [], mealTypes: {} };
+let state = { selected: [], checked: {}, favorites: [], calendar: {}, customRecipes: [], mealTypes: {}, hidden: [] };
 
 // Load from localStorage first for instant render
 const cached = localStorage.getItem('mealPlannerState');
 if (cached) {
   try {
     const parsed = JSON.parse(cached);
-    state = { selected: ensureArray(parsed.selected), checked: ensureObject(parsed.checked), favorites: ensureArray(parsed.favorites), calendar: ensureObject(parsed.calendar), customRecipes: ensureArray(parsed.customRecipes), mealTypes: ensureObject(parsed.mealTypes) };
+    state = { selected: ensureArray(parsed.selected), checked: ensureObject(parsed.checked), favorites: ensureArray(parsed.favorites), calendar: ensureObject(parsed.calendar), customRecipes: ensureArray(parsed.customRecipes), mealTypes: ensureObject(parsed.mealTypes), hidden: ensureArray(parsed.hidden) };
   } catch(e) {}
 }
 
 function ensureArray(v) { return Array.isArray(v) ? v : []; }
 function ensureObject(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
-function getAllRecipes() { return [...RECIPES, ...state.customRecipes]; }
+
+// Seed hardcoded RECIPES into customRecipes so all recipes are unified and deletable
+function seedRecipes() {
+  const existingIds = new Set(state.customRecipes.map(r => r.id));
+  RECIPES.forEach(r => {
+    if (!existingIds.has(r.id)) state.customRecipes.push(r);
+  });
+}
+seedRecipes();
+localStorage.setItem('mealPlannerState', JSON.stringify(state));
+
+function getAllRecipes() { return state.customRecipes; }
 
 function setSyncStatus(status) {
   const el = document.getElementById('sync-dot');
@@ -435,11 +477,16 @@ async function loadFromSupabase() {
     const { data, error } = await sb.from('meal_state').select('*').eq('id', 1).single();
     if (error) throw error;
     if (data) {
+      const localHidden = state.hidden;
+      const localMealTypes = state.mealTypes;
       state.selected = ensureArray(data.selected);
       state.checked = ensureObject(data.checked);
       state.favorites = ensureArray(data.favorites);
       state.calendar = ensureObject(data.calendar);
       state.customRecipes = ensureArray(data.custom_recipes);
+      state.hidden = localHidden;
+      state.mealTypes = localMealTypes;
+      seedRecipes();
       localStorage.setItem('mealPlannerState', JSON.stringify(state));
       render();
     }
@@ -486,11 +533,16 @@ sb.channel('meal_state_changes')
     if (saving) return; // ignore our own writes
     const data = payload.new;
     if (data) {
+      const localHidden = state.hidden;
+      const localMealTypes = state.mealTypes;
       state.selected = ensureArray(data.selected);
       state.checked = ensureObject(data.checked);
       state.favorites = ensureArray(data.favorites);
       state.calendar = ensureObject(data.calendar);
       state.customRecipes = ensureArray(data.custom_recipes);
+      state.hidden = localHidden;
+      state.mealTypes = localMealTypes;
+      seedRecipes();
       localStorage.setItem('mealPlannerState', JSON.stringify(state));
       render();
     }
@@ -510,11 +562,11 @@ loadFromSupabase();
 function showView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const views = ['browse','favorites','calendar','list'];
+  const views = ['browse','inbox','favorites','calendar','list'];
   document.getElementById(view+'-view').classList.add('active');
   document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
-  // Sync shop week to calendar week
   if (view === 'list') shopWeekOffset = calWeekOffset;
+  if (view === 'inbox' && inboxMeals.length === 0 && !inboxLoading) loadInboxMeals();
   render();
 }
 
@@ -572,6 +624,31 @@ function toggleFavorite(id) {
     state.favorites.splice(idx, 1);
   }
   save();
+  render();
+}
+
+let showHidden = false;
+
+function hideRecipe(id) {
+  if (!state.hidden.includes(id)) {
+    state.hidden.push(id);
+    save();
+    render();
+    const r = getAllRecipes().find(r => r.id === id);
+    showToast((r ? r.name : 'Recipe') + ' hidden', function() {
+      state.hidden = state.hidden.filter(h => h !== id);
+      save(); render();
+    });
+  }
+}
+
+function unhideRecipe(id) {
+  state.hidden = state.hidden.filter(h => h !== id);
+  save(); render();
+}
+
+function toggleShowHidden() {
+  showHidden = !showHidden;
   render();
 }
 
@@ -938,18 +1015,23 @@ function render() {
   document.getElementById('meals-count').textContent = calWeekMealCount || '';
   document.getElementById('fav-count').textContent = state.favorites.length || '';
 
-  // Browse view with search
+  // Browse view with search + hidden filter
   const allR = getAllRecipes();
   const q = browseSearch.toLowerCase();
   const filtered = q ? allR.filter(r => r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)) || (r.site && r.site.toLowerCase().includes(q))) : allR;
-  const approved = filtered.filter(r => state.selected.includes(r.id));
-  const available = filtered.filter(r => !state.selected.includes(r.id));
+  const hiddenSet = new Set(state.hidden);
+  const visible = filtered.filter(r => !hiddenSet.has(r.id));
+  const hiddenRecipes = filtered.filter(r => hiddenSet.has(r.id));
+  const approved = visible.filter(r => state.selected.includes(r.id));
+  const available = visible.filter(r => !state.selected.includes(r.id));
 
   let browseHTML = '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
   browseHTML += '<input class="search-input" type="text" placeholder="Search recipes..." value="' + browseSearch.replace(/"/g,'&quot;') + '" oninput="browseSearch=this.value;render()" id="browse-search">';
   if (browseSearch) browseHTML += '<button class="search-clear" onclick="browseSearch=\'\';render()">&times;</button>';
   browseHTML += '</div>';
-  if (filtered.length === 0 && q) {
+  if (visible.length === 0 && !q && hiddenRecipes.length === 0) {
+    browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes yet.<br>Add some from the Inbox tab or import a URL.</p><button class="empty-cta" onclick="showView(\'inbox\')">Discover recipes</button></div>';
+  } else if (visible.length === 0 && q) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match "' + browseSearch + '"</p></div>';
   } else {
     if (approved.length > 0) {
@@ -959,6 +1041,14 @@ function render() {
     if (available.length > 0) {
       browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
       available.forEach(r => { browseHTML += renderCard(r, false); });
+    }
+  }
+  // Hidden recipes toggle
+  if (hiddenRecipes.length > 0) {
+    browseHTML += '<div class="hidden-toggle"><button onclick="toggleShowHidden()">' + (showHidden ? 'Hide' : 'Show') + ' ' + hiddenRecipes.length + ' hidden recipe' + (hiddenRecipes.length !== 1 ? 's' : '') + '</button></div>';
+    if (showHidden) {
+      browseHTML += '<div class="section-label">Hidden (' + hiddenRecipes.length + ')</div>';
+      hiddenRecipes.forEach(r => { browseHTML += renderCard(r, state.selected.includes(r.id), true); });
     }
   }
   browseEl.innerHTML = browseHTML;
@@ -977,6 +1067,49 @@ function render() {
       favHTML += renderCard(r, isSelected);
     });
     favEl.innerHTML = favHTML;
+  }
+
+  // Inbox view
+  const inboxEl = document.getElementById('inbox-view');
+  if (inboxEl) {
+    let inboxHTML = '<div style="margin-bottom:12px"><h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Discover Recipes</h2><p style="font-size:13px;color:var(--muted)">New recipes from around the web. Tap + to add to your collection.</p></div>';
+    const categories = ['Random','Beef','Chicken','Seafood','Pasta','Vegetarian','Pork','Dessert','Side'];
+    inboxHTML += '<div class="inbox-filters">';
+    categories.forEach(cat => {
+      const isActive = (cat === 'Random' && !inboxCategory) || inboxCategory === cat;
+      inboxHTML += '<button class="inbox-filter' + (isActive ? ' active' : '') + '" onclick="filterInbox(\'' + (cat === 'Random' ? '' : cat) + '\')">' + cat + '</button>';
+    });
+    inboxHTML += '</div>';
+    if (inboxLoading) {
+      inboxHTML += '<div class="inbox-loading"><div class="spinner" style="display:block"></div><p>Finding recipes...</p></div>';
+    } else if (inboxMeals.length === 0 && !inboxLoading && document.getElementById('inbox-view').classList.contains('active')) {
+      inboxHTML += '<div class="empty"><div class="icon">&#127760;</div><p>No new recipes found.<br>Try a different category or refresh.</p><button class="empty-cta" onclick="loadInboxMeals(inboxCategory)">Refresh</button></div>';
+    } else if (inboxMeals.length > 0) {
+      inboxHTML += '<div class="inbox-grid">';
+      inboxMeals.forEach(function(meal, idx) {
+        var name = meal.strMeal;
+        var img = meal.strMealThumb ? meal.strMealThumb + '/preview' : '';
+        var cat = meal.strCategory || inboxCategory || '';
+        var area = meal.strArea || '';
+        var added = state.customRecipes.some(function(r) { return r.name.toLowerCase() === name.toLowerCase(); });
+        inboxHTML += '<div class="inbox-card">';
+        if (img) inboxHTML += '<img class="inbox-card-img" src="' + img + '" alt="' + name.replace(/"/g,'&quot;') + '" loading="lazy">';
+        inboxHTML += '<div class="inbox-card-body">';
+        inboxHTML += '<div class="inbox-card-name">' + name + '</div>';
+        inboxHTML += '<div class="inbox-card-meta">' + [cat, area].filter(Boolean).join(' &middot; ') + '</div>';
+        inboxHTML += '<div class="inbox-card-actions">';
+        if (added) {
+          inboxHTML += '<button class="inbox-card-add" disabled>Added &#10003;</button>';
+        } else {
+          inboxHTML += '<button class="inbox-card-add" id="inbox-add-' + idx + '" onclick="addFromInbox(\'' + meal.idMeal + '\',' + idx + ')">+ Add</button>';
+        }
+        inboxHTML += '<button class="inbox-card-skip" onclick="skipInboxMeal(' + idx + ')">Skip</button>';
+        inboxHTML += '</div></div></div>';
+      });
+      inboxHTML += '</div>';
+      inboxHTML += '<div style="text-align:center;margin-top:16px"><button class="btn-outline" onclick="loadInboxMeals(inboxCategory)">&#8635; Load more</button></div>';
+    }
+    inboxEl.innerHTML = inboxHTML;
   }
 
   // Calendar view
@@ -1138,10 +1271,10 @@ function getCardBorderClass(r) {
   return '';
 }
 
-function renderCard(r, isSelected) {
+function renderCard(r, isSelected, isHiddenCard) {
   const isFav = state.favorites.includes(r.id);
   const bc = getCardBorderClass(r);
-  let html = '<div class="card ' + bc + '">';
+  let html = '<div class="card ' + bc + (isHiddenCard ? ' hidden-card' : '') + '">';
   html += '<div class="card-header"><div class="card-title-row"><div>';
   html += '<h3 onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</h3>';
   html += '<div class="tags">';
@@ -1156,12 +1289,17 @@ function renderCard(r, isSelected) {
   if (r.desc) html += '<div class="card-desc">' + r.desc + '</div>';
   html += '</div></div>';
   html += '<div class="card-actions">';
-  html += '<button class="btn-star' + (isFav ? ' starred' : '') + '" onclick="toggleFavorite(\'' + r.id + '\')" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + (isFav ? '&#9733;' : '&#9734;') + '</button>';
-  html += '<button class="btn-cal-quick" onclick="event.stopPropagation();quickAddToDay(\'' + r.id + '\')" title="Add to a day" aria-label="Add to a day">&#128197;</button>';
-  if (isSelected) {
-    html += '<button class="btn btn-remove btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Remove</button>';
+  if (isHiddenCard) {
+    html += '<button class="btn btn-add btn-sm" onclick="unhideRecipe(\'' + r.id + '\')">Unhide</button>';
   } else {
-    html += '<button class="btn btn-add btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Add</button>';
+    html += '<button class="btn-star' + (isFav ? ' starred' : '') + '" onclick="toggleFavorite(\'' + r.id + '\')" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + (isFav ? '&#9733;' : '&#9734;') + '</button>';
+    html += '<button class="btn-cal-quick" onclick="event.stopPropagation();quickAddToDay(\'' + r.id + '\')" title="Add to a day" aria-label="Add to a day">&#128197;</button>';
+    html += '<button class="btn-hide" onclick="event.stopPropagation();hideRecipe(\'' + r.id + '\')" title="Hide recipe">&#10005;</button>';
+    if (isSelected) {
+      html += '<button class="btn btn-remove btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Remove</button>';
+    } else {
+      html += '<button class="btn btn-add btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Add</button>';
+    }
   }
   html += '</div></div>';
   html += '</div>';
@@ -1724,6 +1862,101 @@ function copyShoppingList() {
     btn.innerHTML = '&#10003; Copied!';
     setTimeout(() => { btn.innerHTML = orig; }, 1500);
   });
+}
+
+/* ── Inbox: discover recipes from the web ── */
+let inboxMeals = [];
+let inboxCategory = '';
+let inboxLoading = false;
+let inboxDismissed = JSON.parse(localStorage.getItem('inboxDismissed') || '[]');
+
+async function loadInboxMeals(category) {
+  inboxCategory = category || '';
+  inboxLoading = true;
+  render();
+  try {
+    let meals = [];
+    if (category) {
+      const res = await fetch('https://www.themealdb.com/api/json/v1/1/filter.php?c=' + encodeURIComponent(category));
+      const data = await res.json();
+      meals = (data.meals || []).sort(function() { return Math.random() - 0.5; }).slice(0, 12);
+    } else {
+      const promises = [];
+      for (var i = 0; i < 8; i++) promises.push(fetch('https://www.themealdb.com/api/json/v1/1/random.php').then(function(r) { return r.json(); }));
+      const results = await Promise.all(promises);
+      meals = results.map(function(r) { return r.meals ? r.meals[0] : null; }).filter(Boolean);
+    }
+    const existingNames = new Set(state.customRecipes.map(function(r) { return r.name.toLowerCase(); }));
+    const dismissedSet = new Set(inboxDismissed);
+    inboxMeals = meals.filter(function(m) { return !existingNames.has(m.strMeal.toLowerCase()) && !dismissedSet.has(m.idMeal); });
+  } catch(e) {
+    console.log('Inbox fetch failed:', e);
+    inboxMeals = [];
+  }
+  inboxLoading = false;
+  render();
+}
+
+function filterInbox(category) { loadInboxMeals(category); }
+
+async function addFromInbox(mealId, idx) {
+  const btn = document.getElementById('inbox-add-' + idx);
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
+  try {
+    const res = await fetch('https://www.themealdb.com/api/json/v1/1/lookup.php?i=' + mealId);
+    const data = await res.json();
+    const meal = data.meals ? data.meals[0] : null;
+    if (!meal) throw new Error('Not found');
+    const recipe = convertMealDBRecipe(meal);
+    if (state.customRecipes.some(function(r) { return r.name.toLowerCase() === recipe.name.toLowerCase(); })) {
+      showToast('Already in collection');
+      return;
+    }
+    state.customRecipes.push(recipe);
+    save(); render();
+    showToast(recipe.name + ' added!');
+  } catch(e) {
+    showToast('Failed to add recipe');
+    if (btn) { btn.disabled = false; btn.textContent = '+ Add'; }
+  }
+}
+
+function skipInboxMeal(idx) {
+  var meal = inboxMeals[idx];
+  if (meal) {
+    inboxDismissed.push(meal.idMeal);
+    if (inboxDismissed.length > 500) inboxDismissed = inboxDismissed.slice(-200);
+    localStorage.setItem('inboxDismissed', JSON.stringify(inboxDismissed));
+    inboxMeals.splice(idx, 1);
+    render();
+  }
+}
+
+function convertMealDBRecipe(meal) {
+  var items = [];
+  for (var i = 1; i <= 20; i++) {
+    var ing = meal['strIngredient' + i];
+    var measure = meal['strMeasure' + i];
+    if (ing && ing.trim()) items.push({ name: ing.trim(), qty: (measure || '').trim() });
+  }
+  var tags = [];
+  if (meal.strTags && meal.strTags !== 'null') {
+    meal.strTags.split(',').forEach(function(t) { t = t.trim().toLowerCase(); if (t && t !== 'null') tags.push(t); });
+  }
+  var srcHost = 'TheMealDB';
+  try { if (meal.strSource) srcHost = new URL(meal.strSource).hostname.replace('www.', ''); } catch(e) {}
+  return {
+    id: 'mealdb_' + meal.idMeal,
+    name: meal.strMeal,
+    site: srcHost,
+    url: meal.strSource || ('https://www.themealdb.com/meal/' + meal.idMeal),
+    desc: (meal.strInstructions || '').substring(0, 200).replace(/\r?\n/g, ' ').trim(),
+    tags: tags,
+    servings: 4,
+    ingredients: autoCategorize(items),
+    custom: true,
+    image: meal.strMealThumb
+  };
 }
 
 checkSaturdayNotification();
