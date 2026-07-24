@@ -3,14 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Meal Planner & Shopping List</title>
+<title>Skillet — One pan. Zero fuss.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=DM+Mono:wght@400;500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#f0f4f0;--card:#fff;--text:#1a2e1a;--muted:#5e6e5e;--border:#d4ddd4;--accent:#3d7a4a;--accent-light:#e2f0e5;--accent-text:#1e4a26;--green:#1d9e75;--green-light:#e1f5ee;--green-text:#085041;--blue:#378add;--blue-light:#e6f1fb;--blue-text:#0c447c;--purple:#7f77dd;--purple-light:#eeedfe;--purple-text:#3c3489;--gold:#8b6d3f;--gold-light:#f5eedd;--gold-text:#5a4020;--coral:#d85a30;--coral-light:#faece7;--coral-text:#712b13;--shadow:0 1px 3px rgba(0,0,0,0.05)}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+:root{--bg:#F5EDE3;--card:#FFFBF5;--text:#2D1B0E;--muted:#8C7B6B;--border:#E0D5C8;--accent:#EF5130;--accent-light:#FDECE8;--accent-text:#8B1A08;--green:#3FA35C;--green-light:#E8F5EC;--green-text:#1E5A2F;--blue:#378add;--blue-light:#e6f1fb;--blue-text:#0c447c;--purple:#7f77dd;--purple-light:#eeedfe;--purple-text:#3c3489;--gold:#D4A017;--gold-light:#FFF8E1;--gold-text:#6D5010;--coral:#EF5130;--coral-light:#FDECE8;--coral-text:#8B1A08;--yolk:#FFC23D;--yolk-light:#FFF3D6;--yolk-text:#6D5010;--tomato:#EF5130;--basil:#3FA35C;--shadow:0 1px 3px rgba(45,27,14,0.06);--font-display:'Bricolage Grotesque',serif;--font-body:'Hanken Grotesk',sans-serif;--font-mono:'DM Mono',monospace}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
 .header{background:var(--card);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center}
-.header h1{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
+.header h1{font-family:var(--font-display);font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--text)}
 .sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
 .sync-dot.connected{background:var(--green)}
 .sync-dot.connecting{background:var(--gold);animation:pulse 1.5s infinite}
@@ -31,9 +34,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .card h3{font-size:16px;font-weight:500;line-height:1.3}
 .card .tags{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
 .card .tag{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500}
-.tag-df{background:var(--green-light);color:var(--green-text)}
-.tag-gf{background:var(--blue-light);color:var(--blue-text)}
-.tag-one{background:var(--purple-light);color:var(--purple-text)}
+.tag-df{background:var(--green-light);color:var(--basil)}
+.tag-gf{background:var(--yolk-light);color:var(--gold)}
+.tag-one{background:var(--accent-light);color:var(--tomato)}
 .card .desc{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5}
 .card .source{font-size:12px;color:var(--blue);text-decoration:none;display:inline-block;margin-top:8px}
 .card .source-site{font-size:11px;color:var(--muted);margin-left:8px}
@@ -55,7 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .empty .icon{font-size:48px;opacity:0.25;margin-bottom:4px}
 .empty .empty-cta{display:inline-block;margin-top:16px;padding:10px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:opacity 0.15s}
 .empty .empty-cta:active{opacity:0.85}
-.section-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:16px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.section-label{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:16px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px}
 .shop-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
 .shop-item:last-child{border-bottom:none}
 .shop-item input[type=checkbox]{width:22px;height:22px;margin-top:1px;flex-shrink:0;accent-color:var(--green);cursor:pointer}
@@ -65,9 +68,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .item-qty{font-size:13px;color:var(--muted);margin-top:2px}
 .item-meals{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
 .meal-dot{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--bg);color:var(--muted);border:1px solid var(--border)}
-.progress-bar{background:var(--bg);border-radius:8px;height:6px;margin:12px 0;overflow:hidden}
-.progress-fill{height:100%;background:var(--green);border-radius:8px;transition:width 0.3s}
-.progress-text{font-size:13px;color:var(--muted);margin-bottom:16px}
+.progress-bar{background:rgba(255,255,255,0.3);border-radius:8px;height:6px;margin:12px 0;overflow:hidden}
+.progress-fill{height:100%;background:#fff;border-radius:8px;transition:width 0.3s}
+.progress-text{font-size:13px;color:rgba(255,255,255,0.85);margin-bottom:16px}
 .list-actions{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .btn-outline{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:13px;color:var(--muted);cursor:pointer}
 .btn-outline:active{background:var(--bg)}
@@ -77,15 +80,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .fav-banner{background:var(--gold-light);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--gold-text);display:flex;align-items:center;gap:8px}
 /* Calendar */
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.cal-header h2{font-size:15px;font-weight:600}
+.cal-header h2{font-family:var(--font-display);font-size:16px;font-weight:700}
 .cal-nav-btn{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;color:var(--text)}
 .cal-nav-btn:active{background:var(--bg)}
 .cal-day{background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
 .cal-day-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
-.cal-day-header .day-name{font-size:14px;font-weight:600}
+.cal-day-header .day-name{font-family:var(--font-display);font-size:14px;font-weight:700;text-transform:uppercase}
 .cal-day-header .day-date{font-size:12px;color:var(--muted)}
-.cal-day.today .cal-day-header{background:var(--accent-light)}
-.cal-day.today .day-name{color:var(--accent)}
+.cal-day.today .cal-day-header{background:var(--yolk);color:var(--text)}
+.cal-day.today .day-name{color:var(--text);font-family:var(--font-display)}
 .cal-day.past{opacity:0.55}
 .cal-day.past .cal-day-header{background:var(--bg)}
 .cal-day-count{font-size:11px;font-weight:500;padding:2px 7px;border-radius:10px;background:var(--accent-light);color:var(--accent-text)}
@@ -96,13 +99,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .cal-meal-serves{font-size:11px;color:var(--muted);margin:0 8px;flex-shrink:0}
 .cal-meal-remove{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px;line-height:1}
 .cal-meal-remove:active{color:var(--accent)}
-.cal-meal-type{font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;flex-shrink:0;text-transform:uppercase;letter-spacing:0.3px;font-weight:500}
-.cal-meal-type:active{border-color:var(--accent)}
-.cal-meal-type.mt-breakfast{background:var(--gold-light);color:var(--gold-text);border-color:var(--gold)}
-.cal-meal-type.mt-lunch{background:var(--blue-light);color:var(--blue-text);border-color:var(--blue)}
-.cal-meal-type.mt-dinner{background:var(--purple-light);color:var(--purple-text);border-color:var(--purple)}
-.btn-add-meal{display:flex;align-items:center;gap:6px;padding:10px;border:1px dashed var(--border);border-radius:8px;background:none;color:var(--muted);font-size:13px;cursor:pointer;width:100%;justify-content:center;transition:all 0.15s}
-.btn-add-meal:active{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.cal-meal-type{font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:6px;border:none;background:var(--text);color:var(--card);cursor:pointer;flex-shrink:0;text-transform:uppercase;letter-spacing:0.5px;font-weight:500}
+.cal-meal-type:active{opacity:0.8}
+.cal-meal-type.mt-breakfast{background:var(--yolk);color:var(--text)}
+.cal-meal-type.mt-lunch{background:var(--basil);color:#fff}
+.cal-meal-type.mt-dinner{background:var(--text);color:var(--card)}
+.btn-add-meal{display:flex;align-items:center;gap:6px;padding:12px;border:2px dashed var(--border);border-radius:8px;background:none;color:var(--muted);font-size:13px;cursor:pointer;width:100%;justify-content:center;transition:all 0.15s}
+.btn-add-meal:active{border-color:var(--tomato);color:var(--tomato);background:var(--accent-light)}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:200;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:var(--card);border-radius:16px 16px 0 0;width:100%;max-width:500px;max-height:70vh;overflow-y:auto;padding:20px;animation:slideUp 0.2s ease}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -150,19 +153,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 }
 .tab-icon{display:none}
 .card{padding:12px 14px;border-left:3px solid var(--border);transition:border-color 0.15s}
-.card.tag-border-onepan{border-left-color:var(--purple)}
-.card.tag-border-fakeaway{border-left-color:var(--gold)}
-.card.tag-border-df{border-left-color:var(--green)}
-.card.tag-border-gf{border-left-color:var(--blue)}
-.card.tag-border-onepot{border-left-color:var(--coral)}
+.card.tag-border-onepan{border-left-color:var(--tomato)}
+.card.tag-border-fakeaway{border-left-color:var(--yolk)}
+.card.tag-border-df{border-left-color:var(--basil)}
+.card.tag-border-gf{border-left-color:var(--yolk)}
+.card.tag-border-onepot{border-left-color:var(--basil)}
 .card .card-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .card h3{font-size:15px;cursor:pointer}
 .card h3:active{color:var(--accent)}
 .card .tags{margin-top:4px}
-.progress-ring-wrap{display:flex;align-items:center;gap:16px;margin:8px 0 16px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.progress-ring-wrap{display:flex;align-items:center;gap:16px;margin:8px 0 16px;padding:16px;background:var(--basil);border-radius:12px;box-shadow:var(--shadow);color:#fff}
 .progress-ring-info{flex:1}
-.progress-ring-info .pr-count{font-size:15px;font-weight:500;color:var(--text)}
-.progress-ring-info .pr-hint{font-size:12px;color:var(--muted);margin-top:4px}
+.progress-ring-info .pr-count{font-family:var(--font-display);font-size:16px;font-weight:700;color:#fff}
+.progress-ring-info .pr-hint{font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px}
 @media(max-width:400px){
   .tab{flex-direction:column;padding:8px 4px;font-size:11px;gap:2px;display:flex;align-items:center;position:relative}
   .tab-icon{display:block;font-size:18px;line-height:1}
@@ -252,14 +255,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .inbox-card-name{font-size:14px;font-weight:500;line-height:1.3;margin-bottom:4px}
 .inbox-card-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
 .inbox-card-actions{display:flex;gap:6px}
-.inbox-card-add{flex:1;padding:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer}
+.inbox-card-add{flex:1;padding:8px;background:var(--tomato);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .inbox-card-add:active{opacity:0.85}
 .inbox-card-add:disabled{opacity:0.4;cursor:default}
 .inbox-card-skip{padding:6px 10px;background:var(--bg);color:var(--muted);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer}
 .inbox-card-skip:active{background:var(--border)}
 .inbox-filters{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
-.inbox-filter{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s}
-.inbox-filter.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.inbox-filter{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--card);font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.inbox-filter.active{background:var(--text);color:#fff;border-color:var(--text)}
 .inbox-filter:active{transform:scale(0.95)}
 .inbox-loading{text-align:center;padding:40px 20px;color:var(--muted)}
 .inbox-loading .spinner{width:24px;height:24px;margin:0 auto 12px}
@@ -276,7 +279,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <body>
 
 <div class="header">
-  <h1>Meal Planner <span class="sync-dot connecting" id="sync-dot" title="connecting..."></span></h1>
+  <h1><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--tomato);border-radius:8px;margin-right:2px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><line x1="20" y1="12" x2="23" y2="12"/></svg></span>Skillet <span class="sync-dot connecting" id="sync-dot" title="connecting..."></span></h1>
   <div class="header-actions">
     <button class="plan-go" onclick="openImportModal()"><span class="btn-text">+ Add Recipe</span><span class="btn-icon" style="display:none">+</span></button>
     <button class="plan-go" onclick="openWeekPicker()"><span class="btn-text">+ New Plan</span><span class="btn-icon" style="display:none">&#128197;</span></button>
@@ -1055,7 +1058,8 @@ function render() {
   // Inbox view
   const inboxEl = document.getElementById('inbox-view');
   if (inboxEl) {
-    let inboxHTML = '<div style="margin-bottom:12px"><h2 style="font-size:16px;font-weight:600;margin-bottom:4px">Discover Recipes</h2><p style="font-size:13px;color:var(--muted)">Curated picks from our favorite sites. Tap + to add to your collection.</p></div>';
+    const inboxCount = getInboxMeals().length;
+    let inboxHTML = '<div style="background:linear-gradient(135deg,var(--yolk),var(--tomato));border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden"><div style="position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:var(--yolk);opacity:0.5"></div><div style="position:absolute;right:10px;top:10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15)"></div><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);margin-bottom:6px">Weekly picks</div><h2 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:6px">' + inboxCount + ' fresh dinners<br>to discover</h2><p style="font-size:13px;color:rgba(255,255,255,0.85)">Tap + to add to your collection &rarr;</p></div>';
     const sites = ['All','Simple Home Edit','Budget Bytes','Half Baked Harvest'];
     inboxHTML += '<div class="inbox-filters">';
     sites.forEach(s => {
@@ -1070,11 +1074,13 @@ function render() {
       inboxHTML += '<div class="inbox-grid">';
       inboxMeals.forEach(function(recipe) {
         var added = state.customRecipes.some(function(r) { return r.name.toLowerCase() === recipe.name.toLowerCase(); });
+        var tagColorMap = {'one-pan':'var(--tomato)','one-pot':'var(--basil)','dairy-free':'var(--basil)','gluten-free':'var(--gold)','fakeaway':'var(--yolk)','vegetarian':'var(--basil)'};
+        var tagBgMap = {'one-pan':'var(--accent-light)','one-pot':'var(--green-light)','dairy-free':'var(--green-light)','gluten-free':'var(--yolk-light)','fakeaway':'var(--yolk-light)','vegetarian':'var(--green-light)'};
         inboxHTML += '<div class="inbox-card"><div class="inbox-card-body">';
-        inboxHTML += '<div class="inbox-card-name"><a href="' + recipe.url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">' + recipe.name + '</a></div>';
-        inboxHTML += '<div class="inbox-card-meta"><a href="' + recipe.url + '" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">' + recipe.site + ' &#8599;</a></div>';
-        if (recipe.desc) inboxHTML += '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.4">' + recipe.desc + '</div>';
-        if (recipe.tags && recipe.tags.length) inboxHTML += '<div style="font-size:11px;margin-bottom:8px">' + recipe.tags.map(function(t){return '<span style="display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin:0 4px 2px 0">' + t + '</span>';}).join('') + '</div>';
+        inboxHTML += '<div class="inbox-card-name" style="font-family:var(--font-display);font-size:15px;font-weight:700"><a href="' + recipe.url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">' + recipe.name + '</a></div>';
+        inboxHTML += '<div class="inbox-card-meta" style="font-family:var(--font-mono);font-size:11px"><a href="' + recipe.url + '" target="_blank" rel="noopener" style="color:var(--tomato);text-decoration:none">' + recipe.site + ' &#8599;</a></div>';
+        if (recipe.tags && recipe.tags.length) inboxHTML += '<div style="font-size:11px;margin-bottom:6px">' + recipe.tags.map(function(t){var c=tagColorMap[t]||'var(--muted)';var bg=tagBgMap[t]||'var(--bg)';return '<span style="display:inline-block;background:'+bg+';color:'+c+';border-radius:6px;padding:2px 8px;margin:0 4px 2px 0;font-weight:500">' + t + '</span>';}).join('') + '</div>';
+        if (recipe.servings) inboxHTML += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:8px">serves ' + recipe.servings + '</div>';
         inboxHTML += '<div class="inbox-card-actions">';
         if (added) {
           inboxHTML += '<button class="inbox-card-add" disabled>Added &#10003;</button>';
