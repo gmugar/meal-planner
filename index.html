@@ -285,16 +285,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="plan-notification"></div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Browse<span class="badge" id="browse-count">0</span></button>
-  <button class="tab" onclick="showView('inbox')"><span class="tab-icon">&#128229;</span>Inbox<span class="badge" id="inbox-count"></span></button>
-  <button class="tab" onclick="showView('favorites')"><span class="tab-icon">&#9733;</span>Favs<span class="badge" id="fav-count">0</span></button>
+  <button class="tab active" onclick="showView('inbox')"><span class="tab-icon">&#128229;</span>Inbox<span class="badge" id="inbox-count"></span></button>
+  <button class="tab" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Recipes<span class="badge" id="browse-count">0</span></button>
   <button class="tab" onclick="showView('calendar')"><span class="tab-icon">&#128197;</span>Calendar<span class="badge" id="meals-count">0</span></button>
   <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
 </div>
 
-<div id="browse-view" class="view active"></div>
-<div id="inbox-view" class="view"></div>
-<div id="favorites-view" class="view"></div>
+<div id="inbox-view" class="view active"></div>
+<div id="browse-view" class="view"></div>
 <div id="calendar-view" class="view"></div>
 <div id="list-view" class="view"></div>
 
@@ -562,7 +560,7 @@ loadFromSupabase();
 function showView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const views = ['browse','inbox','favorites','calendar','list'];
+  const views = ['inbox','browse','calendar','list'];
   document.getElementById(view+'-view').classList.add('active');
   document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
   if (view === 'list') shopWeekOffset = calWeekOffset;
@@ -1007,23 +1005,21 @@ function getShoppingList(mealIds) {
 
 function render() {
   const browseEl = document.getElementById('browse-view');
-  const favEl = document.getElementById('favorites-view');
   const listEl = document.getElementById('list-view');
 
-  document.getElementById('browse-count').textContent = state.selected.length || '';
+  document.getElementById('browse-count').textContent = getAllRecipes().length || '';
   const calWeekMealCount = getMealsForWeek(calWeekOffset).length;
   document.getElementById('meals-count').textContent = calWeekMealCount || '';
-  document.getElementById('fav-count').textContent = state.favorites.length || '';
 
-  // Browse view with search + hidden filter
+  // Browse/Recipes view with favorites on top, search + hidden filter
   const allR = getAllRecipes();
   const q = browseSearch.toLowerCase();
   const filtered = q ? allR.filter(r => r.name.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q)) || (r.site && r.site.toLowerCase().includes(q))) : allR;
   const hiddenSet = new Set(state.hidden);
   const visible = filtered.filter(r => !hiddenSet.has(r.id));
   const hiddenRecipes = filtered.filter(r => hiddenSet.has(r.id));
-  const approved = visible.filter(r => state.selected.includes(r.id));
-  const available = visible.filter(r => !state.selected.includes(r.id));
+  const favVisible = visible.filter(r => state.favorites.includes(r.id));
+  const nonFavVisible = visible.filter(r => !state.favorites.includes(r.id));
 
   let browseHTML = '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
   browseHTML += '<input class="search-input" type="text" placeholder="Search recipes..." value="' + browseSearch.replace(/"/g,'&quot;') + '" oninput="browseSearch=this.value;render()" id="browse-search">';
@@ -1034,13 +1030,13 @@ function render() {
   } else if (visible.length === 0 && q) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match "' + browseSearch + '"</p></div>';
   } else {
-    if (approved.length > 0) {
-      browseHTML += '<div class="section-label">My Meals (' + approved.length + ')</div>';
-      approved.forEach(r => { browseHTML += renderCard(r, true); });
+    if (favVisible.length > 0) {
+      browseHTML += '<div class="section-label">&#11088; Favorites (' + favVisible.length + ')</div>';
+      favVisible.forEach(r => { browseHTML += renderCard(r, state.selected.includes(r.id)); });
     }
-    if (available.length > 0) {
-      browseHTML += '<div class="section-label">Available (' + available.length + ')</div>';
-      available.forEach(r => { browseHTML += renderCard(r, false); });
+    if (nonFavVisible.length > 0) {
+      browseHTML += '<div class="section-label">All Recipes (' + nonFavVisible.length + ')</div>';
+      nonFavVisible.forEach(r => { browseHTML += renderCard(r, state.selected.includes(r.id)); });
     }
   }
   // Hidden recipes toggle
@@ -1055,19 +1051,6 @@ function render() {
   // Restore cursor position in search
   const si = document.getElementById('browse-search');
   if (si && document.activeElement !== si && q) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
-
-  // Favorites view
-  const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
-  if (favRecipes.length === 0) {
-    favEl.innerHTML = '<div class="empty"><div class="icon">&#11088;</div><p>No favorites yet.<br>Tap the star on any recipe to save it here.</p><button class="empty-cta" onclick="showView(\'browse\')">Browse recipes</button></div>';
-  } else {
-    let favHTML = '<div class="fav-banner">&#11088; Your starred recipes — tap the star on any meal to save it here for easy access.</div>';
-    favRecipes.forEach(r => {
-      const isSelected = state.selected.includes(r.id);
-      favHTML += renderCard(r, isSelected);
-    });
-    favEl.innerHTML = favHTML;
-  }
 
   // Inbox view
   const inboxEl = document.getElementById('inbox-view');
@@ -1961,6 +1944,7 @@ function convertMealDBRecipe(meal) {
 
 checkSaturdayNotification();
 render();
+loadInboxMeals();
 </script>
 </body>
 </html>
