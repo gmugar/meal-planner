@@ -1058,8 +1058,8 @@ function render() {
   // Inbox view
   const inboxEl = document.getElementById('inbox-view');
   if (inboxEl) {
-    const inboxCount = getInboxMeals().length;
-    let inboxHTML = '<div style="background:linear-gradient(135deg,var(--yolk),var(--tomato));border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden"><div style="position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:var(--yolk);opacity:0.5"></div><div style="position:absolute;right:10px;top:10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15)"></div><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);margin-bottom:6px">Weekly picks</div><h2 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:6px">' + inboxCount + ' fresh dinners<br>to discover</h2><p style="font-size:13px;color:rgba(255,255,255,0.85)">Tap + to add to your collection &rarr;</p></div>';
+    const inboxItems = getInboxMeals();
+    let inboxHTML = '<div style="background:linear-gradient(135deg,var(--yolk),var(--tomato));border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden"><div style="position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:var(--yolk);opacity:0.5"></div><div style="position:absolute;right:10px;top:10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15)"></div><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);margin-bottom:6px">Weekly picks</div><h2 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:6px">' + inboxItems.length + ' fresh dinners<br>this week</h2><p style="font-size:13px;color:rgba(255,255,255,0.85)">Tap + to add to your collection &rarr;</p></div>';
     const sites = ['All','Simple Home Edit','Budget Bytes','Half Baked Harvest'];
     inboxHTML += '<div class="inbox-filters">';
     sites.forEach(s => {
@@ -1067,7 +1067,7 @@ function render() {
       inboxHTML += '<button class="inbox-filter' + (isActive ? ' active' : '') + '" onclick="filterInbox(\'' + (s === 'All' ? '' : s.replace(/'/g,"\\'")) + '\')">' + s + '</button>';
     });
     inboxHTML += '</div>';
-    const inboxMeals = getInboxMeals();
+    const inboxMeals = inboxItems;
     if (inboxMeals.length === 0) {
       inboxHTML += '<div class="empty"><div class="icon">&#127881;</div><p>You\'ve seen all the recipes!<br>Clear dismissed to see them again.</p><button class="empty-cta" onclick="inboxDismissed=[];localStorage.setItem(\'inboxDismissed\',\'[]\');render()">Reset</button></div>';
     } else {
@@ -1883,12 +1883,25 @@ const INBOX_RECIPES = [
 let inboxCategory = '';
 let inboxDismissed = JSON.parse(localStorage.getItem('inboxDismissed') || '[]');
 
+function getWeekNumber() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  return Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000));
+}
+
 function getInboxMeals() {
   const existingNames = new Set(state.customRecipes.map(r => r.name.toLowerCase()));
   const dismissedSet = new Set(inboxDismissed);
   let pool = INBOX_RECIPES.filter(r => !existingNames.has(r.name.toLowerCase()) && !dismissedSet.has(r.id));
   if (inboxCategory) pool = pool.filter(r => r.site === inboxCategory);
-  return pool;
+  // Pick 5 per week using week number as seed
+  const week = getWeekNumber();
+  const shuffled = pool.slice().sort(function(a, b) {
+    var ha = (week * 2654435761 + a.id.charCodeAt(a.id.length - 1) * 31) & 0xFFFFFFFF;
+    var hb = (week * 2654435761 + b.id.charCodeAt(b.id.length - 1) * 31) & 0xFFFFFFFF;
+    return ha - hb;
+  });
+  return shuffled.slice(0, 5);
 }
 
 function filterInbox(category) { inboxCategory = category || ''; render(); }
