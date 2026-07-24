@@ -1078,8 +1078,9 @@ function render() {
         inboxHTML += '<div class="inbox-card">';
         if (img) inboxHTML += '<img class="inbox-card-img" src="' + img + '" alt="' + name.replace(/"/g,'&quot;') + '" loading="lazy">';
         inboxHTML += '<div class="inbox-card-body">';
-        inboxHTML += '<div class="inbox-card-name">' + name + '</div>';
-        inboxHTML += '<div class="inbox-card-meta">' + [cat, area].filter(Boolean).join(' &middot; ') + '</div>';
+        var mealUrl = 'https://www.themealdb.com/meal/' + meal.idMeal;
+        inboxHTML += '<div class="inbox-card-name"><a href="' + mealUrl + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">' + name + '</a></div>';
+        inboxHTML += '<div class="inbox-card-meta"><a href="' + mealUrl + '" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">' + [cat, area].filter(Boolean).join(' &middot; ') + ' &#8599;</a></div>';
         inboxHTML += '<div class="inbox-card-actions">';
         if (added) {
           inboxHTML += '<button class="inbox-card-add" disabled>Added &#10003;</button>';
