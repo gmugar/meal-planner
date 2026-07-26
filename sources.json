@@ -1,5 +1,23 @@
 [
-  {"id":"simple-home-edit","name":"Simple Home Edit","url":"https://simplehomeedit.com","notes":"fakeaway, one-pan, one-pot, ground beef","active":true},
-  {"id":"budget-bytes","name":"Budget Bytes","url":"https://www.budgetbytes.com","notes":"one-pot meals, easy ground beef, budget comfort","active":true},
-  {"id":"half-baked-harvest","name":"Half Baked Harvest","url":"https://www.halfbakedharvest.com","notes":"beef recipes, bold Asian fakeaway, one-pan dinners","active":true}
+  {
+    "id": "simple-home-edit",
+    "name": "Simple Home Edit",
+    "url": "https://simplehomeedit.com",
+    "notes": "20 minutes or less category (prioritize), fakeaway, one-pan, one-pot, ground beef",
+    "active": true
+  },
+  {
+    "id": "budget-bytes",
+    "name": "Budget Bytes",
+    "url": "https://www.budgetbytes.com",
+    "notes": "one-pot meals, easy ground beef, budget comfort",
+    "active": true
+  },
+  {
+    "id": "half-baked-harvest",
+    "name": "Half Baked Harvest",
+    "url": "https://www.halfbakedharvest.com",
+    "notes": "beef recipes, bold Asian fakeaway, one-pan dinners",
+    "active": true
+  }
 ]
