@@ -312,7 +312,24 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let syncConnected = false;
-let saving = false;
+
+/* ── Shared helpers ── */
+// Escape text for safe interpolation into innerHTML (imported/user content).
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+// FNV-1a string hash + finalizing avalanche → unsigned 32-bit, for deterministic
+// seeded ordering. The final mix is essential: without it, changing only the last
+// character (e.g. the week digit) barely perturbs the hash, so the ordering wouldn't
+// vary week to week.
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15;
+  return h >>> 0;
+}
 
 const RECIPES = [
   {
@@ -475,6 +492,7 @@ const RECIPES = [
 let state = { selected: [], checked: {}, favorites: [], calendar: {}, customRecipes: [], mealTypes: {}, hidden: [] };
 
 // Load from localStorage first for instant render
+let localUpdatedAt = parseInt(localStorage.getItem('mealPlannerUpdatedAt') || '0', 10) || 0;
 const cached = localStorage.getItem('mealPlannerState');
 if (cached) {
   try {
@@ -486,7 +504,9 @@ if (cached) {
 function ensureArray(v) { return Array.isArray(v) ? v : []; }
 function ensureObject(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
 
-// Seed hardcoded RECIPES into customRecipes so all recipes are unified and deletable
+// Seed hardcoded RECIPES into customRecipes so all recipes are unified and deletable.
+// Tombstoned recipes (deleted:true) keep their id present, so a deleted seed is
+// never resurrected here and the deletion syncs via custom_recipes.
 function seedRecipes() {
   const existingIds = new Set(state.customRecipes.map(r => r.id));
   RECIPES.forEach(r => {
@@ -494,9 +514,12 @@ function seedRecipes() {
   });
 }
 seedRecipes();
-localStorage.setItem('mealPlannerState', JSON.stringify(state));
+persistLocal();
 
-function getAllRecipes() { return state.customRecipes; }
+// Visible recipes exclude tombstones (see deleteCustomRecipe).
+function getAllRecipes() { return state.customRecipes.filter(r => !r.deleted); }
+// Does a checked-item key belong to this recipe? Keys are `weekKey|recipeId|itemName`.
+function keyMatchesRecipe(k, id) { const p = k.split('|'); return p[0] === id || p[1] === id; }
 
 function setSyncStatus(status) {
   const el = document.getElementById('sync-dot');
@@ -505,23 +528,62 @@ function setSyncStatus(status) {
   el.title = status === 'connected' ? 'Synced' : status === 'connecting' ? 'Connecting...' : 'Offline';
 }
 
+/* ── Sync engine ──
+   Local-first with last-write-wins by timestamp. Every mutation calls save(),
+   which stamps localUpdatedAt, writes localStorage synchronously (never dropped),
+   and schedules a debounced flush to Supabase. A single-flight flush with a dirty
+   flag guarantees the latest state is always persisted — rapid edits never get
+   lost. Incoming remote data (initial load or realtime) is applied only when it is
+   strictly newer than our last local change, so our own echoes never revert us and
+   newer offline-local edits are never clobbered by a stale server row. */
+let flushInFlight = false;
+let flushDirty = false;
+let flushTimer = null;
+let lastSyncedAt = 0;
+
+function persistLocal() {
+  try {
+    localStorage.setItem('mealPlannerState', JSON.stringify(state));
+    localStorage.setItem('mealPlannerUpdatedAt', String(localUpdatedAt));
+  } catch(e) {}
+}
+
+// Overwrite the synced fields from a remote row, preserving device-local fields.
+function applyRemote(data) {
+  const localHidden = state.hidden;
+  const localMealTypes = state.mealTypes;
+  state.selected = ensureArray(data.selected);
+  state.checked = ensureObject(data.checked);
+  state.favorites = ensureArray(data.favorites);
+  state.calendar = ensureObject(data.calendar);
+  state.customRecipes = ensureArray(data.custom_recipes);
+  state.hidden = localHidden;
+  state.mealTypes = localMealTypes;
+  seedRecipes();
+  persistLocal();
+  render();
+}
+
+function remoteMs(data) {
+  const t = data && data.updated_at ? Date.parse(data.updated_at) : 0;
+  return isNaN(t) ? 0 : t;
+}
+
 async function loadFromSupabase() {
   try {
     const { data, error } = await sb.from('meal_state').select('*').eq('id', 1).single();
     if (error) throw error;
     if (data) {
-      const localHidden = state.hidden;
-      const localMealTypes = state.mealTypes;
-      state.selected = ensureArray(data.selected);
-      state.checked = ensureObject(data.checked);
-      state.favorites = ensureArray(data.favorites);
-      state.calendar = ensureObject(data.calendar);
-      state.customRecipes = ensureArray(data.custom_recipes);
-      state.hidden = localHidden;
-      state.mealTypes = localMealTypes;
-      seedRecipes();
-      localStorage.setItem('mealPlannerState', JSON.stringify(state));
-      render();
+      const rMs = remoteMs(data);
+      if (rMs > localUpdatedAt) {
+        // Server is newer than anything we have locally — adopt it.
+        localUpdatedAt = rMs;
+        lastSyncedAt = rMs;
+        applyRemote(data);
+      } else if (localUpdatedAt > lastSyncedAt) {
+        // We hold unsynced local changes that are newer — push them up.
+        scheduleFlush();
+      }
     }
     syncConnected = true;
     setSyncStatus('connected');
@@ -532,10 +594,16 @@ async function loadFromSupabase() {
   }
 }
 
-async function saveToSupabase() {
-  if (saving) return;
-  saving = true;
-  localStorage.setItem('mealPlannerState', JSON.stringify(state));
+function scheduleFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(function() { flushTimer = null; flushToSupabase(); }, 400);
+}
+
+async function flushToSupabase() {
+  if (flushInFlight) { flushDirty = true; return; }
+  flushInFlight = true;
+  flushDirty = false;
+  const stamp = localUpdatedAt || Date.now();
   try {
     const { error } = await sb.from('meal_state').upsert({
       id: 1,
@@ -544,40 +612,39 @@ async function saveToSupabase() {
       favorites: state.favorites,
       calendar: state.calendar,
       custom_recipes: state.customRecipes,
-      updated_at: new Date().toISOString()
+      updated_at: new Date(stamp).toISOString()
     });
     if (error) throw error;
+    lastSyncedAt = stamp;
     syncConnected = true;
     setSyncStatus('connected');
   } catch(e) {
     console.log('Supabase save failed:', e.message);
+    syncConnected = false;
     setSyncStatus('offline');
+    flushDirty = true; // retry on next flush
   }
-  saving = false;
+  flushInFlight = false;
+  // If more edits landed (or the write failed), flush again with the latest state.
+  if (flushDirty || localUpdatedAt > lastSyncedAt) { flushDirty = false; scheduleFlush(); }
 }
 
 function save() {
-  saveToSupabase();
+  localUpdatedAt = Date.now();
+  persistLocal();
+  scheduleFlush();
 }
 
-// Realtime subscription
+// Realtime subscription: apply only rows strictly newer than our local state.
 sb.channel('meal_state_changes')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_state' }, (payload) => {
-    if (saving) return; // ignore our own writes
     const data = payload.new;
-    if (data) {
-      const localHidden = state.hidden;
-      const localMealTypes = state.mealTypes;
-      state.selected = ensureArray(data.selected);
-      state.checked = ensureObject(data.checked);
-      state.favorites = ensureArray(data.favorites);
-      state.calendar = ensureObject(data.calendar);
-      state.customRecipes = ensureArray(data.custom_recipes);
-      state.hidden = localHidden;
-      state.mealTypes = localMealTypes;
-      seedRecipes();
-      localStorage.setItem('mealPlannerState', JSON.stringify(state));
-      render();
+    if (!data) return;
+    const rMs = remoteMs(data);
+    if (rMs > localUpdatedAt) {
+      localUpdatedAt = rMs;
+      lastSyncedAt = rMs;
+      applyRemote(data);
     }
   })
   .subscribe((status) => {
@@ -599,8 +666,8 @@ function showView(view) {
   document.getElementById(view+'-view').classList.add('active');
   document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
   if (view === 'list') shopWeekOffset = calWeekOffset;
-  if (view === 'inbox') render();
   render();
+  window.scrollTo(0, 0); // fresh tab starts at the top
 }
 
 let toastTimer = null;
@@ -608,7 +675,7 @@ function showToast(msg, undoFn) {
   const old = document.querySelector('.toast');
   if (old) old.remove();
   if (toastTimer) clearTimeout(toastTimer);
-  let html = '<div class="toast"><span>' + msg + '</span>';
+  let html = '<div class="toast"><span>' + esc(msg) + '</span>';
   if (undoFn) html += '<button class="toast-undo" onclick="this.parentElement.remove();">Undo</button>';
   html += '</div>';
   document.body.insertAdjacentHTML('beforeend', html);
@@ -633,9 +700,11 @@ function toggleMeal(id) {
 
     state.selected.splice(idx, 1);
     Object.keys(state.checked).forEach(k => {
-      if (k.startsWith(id+'|')) delete state.checked[k];
+      if (keyMatchesRecipe(k, id)) delete state.checked[k];
     });
+    // Remove from today/future days only — keep past days as cooked history.
     Object.keys(state.calendar).forEach(dk => {
+      if (isPast(new Date(dk + 'T12:00:00'))) return;
       state.calendar[dk] = state.calendar[dk].filter(mid => mid !== id);
       if (state.calendar[dk].length === 0) delete state.calendar[dk];
     });
@@ -718,7 +787,14 @@ function getWeekDates(offset) {
   return dates;
 }
 
-function dateKey(d) { return d.toISOString().split('T')[0]; }
+// Local calendar date (Y-M-D) — NOT toISOString(), which shifts by a day in
+// non-US timezones and can even flip the day for US zones after UTC midnight.
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
 
 function isToday(d) {
   const n = new Date();
@@ -748,7 +824,8 @@ function copyWeek(offset) {
     const sk = dateKey(d);
     const dk = dateKey(dstDates[i]);
     if (state.calendar[sk] && state.calendar[sk].length > 0) {
-      state.calendar[dk] = [...(state.calendar[dk]||[]), ...state.calendar[sk]];
+      // Dedupe so copying twice (or onto an existing plan) doesn't double meals.
+      state.calendar[dk] = [...new Set([...(state.calendar[dk]||[]), ...state.calendar[sk]])];
     }
   });
   save(); render();
@@ -810,7 +887,7 @@ function renderPicker() {
     approvedRecipes.forEach(r => {
       const added = dayMeals.includes(r.id);
       h += '<div class="modal-meal' + (added?' added':'') + '" ' + (added?'':'onclick="addMealToDay(\''+pickerDate+'\',\''+r.id+'\')"') + '>';
-      h += '<div class="modal-meal-info"><div class="modal-meal-name">' + r.name + '</div>';
+      h += '<div class="modal-meal-info"><div class="modal-meal-name">' + esc(r.name) + '</div>';
       h += '<div class="modal-meal-tags">serves ' + r.servings + (added?' · already added':'') + '</div></div>';
       if (!added) h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
       h += '</div>';
@@ -821,7 +898,7 @@ function renderPicker() {
     otherRecipes.forEach(r => {
       const added = dayMeals.includes(r.id);
       h += '<div class="modal-meal' + (added?' added':'') + '" ' + (added?'':'onclick="addMealToDayAndSelect(\''+pickerDate+'\',\''+r.id+'\')"') + '>';
-      h += '<div class="modal-meal-info"><div class="modal-meal-name">' + r.name + '</div>';
+      h += '<div class="modal-meal-info"><div class="modal-meal-name">' + esc(r.name) + '</div>';
       h += '<div class="modal-meal-tags">serves ' + r.servings + (added?' · already added':'') + '</div></div>';
       if (!added) h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
       h += '</div>';
@@ -978,7 +1055,7 @@ function openInboxAssign(mealId) {
   const weekDates = getWeekDates(calWeekOffset);
   let h = '<div class="modal-overlay" id="inbox-assign-modal" onclick="if(event.target===this)closeInboxAssign()">';
   h += '<div class="modal">';
-  h += '<h3>Assign ' + r.name + '</h3>';
+  h += '<h3>Assign ' + esc(r.name) + '</h3>';
   h += '<p class="modal-sub">Pick a day this week</p>';
   weekDates.forEach(d => {
     const dk = dateKey(d);
@@ -1007,7 +1084,7 @@ function openRecipeDetail(mealId) {
   if (old) old.remove();
   let h = '<div class="modal-overlay" id="recipe-detail-modal" onclick="if(event.target===this)closeRecipeDetail()">';
   h += '<div class="modal" style="max-height:85vh">';
-  h += '<div class="detail-header"><h3>' + r.name + '</h3>';
+  h += '<div class="detail-header"><h3>' + esc(r.name) + '</h3>';
   h += '<button class="detail-close" onclick="closeRecipeDetail()">&times;</button></div>';
   h += '<div class="detail-tags">';
   r.tags.forEach(t => {
@@ -1018,14 +1095,17 @@ function openRecipeDetail(mealId) {
   });
   h += '<span class="tag" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">serves ' + r.servings + '</span>';
   h += '</div>';
-  h += '<p class="detail-desc">' + r.desc + '</p>';
-  r.ingredients.forEach(g => {
-    h += '<div class="detail-section">' + g.cat + '</div>';
+  h += '<p class="detail-desc">' + esc(r.desc) + '</p>';
+  (r.ingredients || []).forEach(g => {
+    h += '<div class="detail-section">' + esc(g.cat) + '</div>';
     g.items.forEach(item => {
-      h += '<div class="detail-ingredient"><span class="detail-ing-name">' + item.name + '</span>';
-      h += '<span class="detail-ing-qty">' + item.qty + '</span></div>';
+      h += '<div class="detail-ingredient"><span class="detail-ing-name">' + esc(item.name) + '</span>';
+      h += '<span class="detail-ing-qty">' + esc(item.qty) + '</span></div>';
     });
   });
+  if (!r.ingredients || r.ingredients.reduce((s,g)=>s+g.items.length,0) === 0) {
+    h += '<p class="detail-desc" style="color:var(--muted);font-style:italic">No ingredients yet — use “Edit ingredients” below so this shows up on your shopping list.</p>';
+  }
   h += '<a class="detail-source" href="' + r.url + '" target="_blank">View full recipe on ' + r.site + ' &#8599;</a>';
   const inPlan = state.selected.includes(r.id);
   if (inPlan) {
@@ -1033,9 +1113,8 @@ function openRecipeDetail(mealId) {
   } else {
     h += '<button class="btn btn-add" style="width:100%;margin-top:12px;padding:12px" onclick="toggleMeal(\'' + r.id + '\');closeRecipeDetail()">Add to plan</button>';
   }
-  if (r.custom) {
-    h += '<button class="modal-cancel" onclick="if(confirm(\'Delete this imported recipe?\')){deleteCustomRecipe(\'' + r.id + '\');closeRecipeDetail()}" style="color:#c0392b;margin-top:8px;border:1px solid #c0392b">Delete imported recipe</button>';
-  }
+  h += '<button class="modal-cancel" onclick="openIngredientEditor(\'' + r.id + '\')" style="margin-top:8px">&#9998; Edit ingredients</button>';
+  h += '<button class="modal-cancel" onclick="if(confirm(\'Delete this recipe? This can\\\'t be undone.\')){deleteCustomRecipe(\'' + r.id + '\');closeRecipeDetail()}" style="color:#c0392b;margin-top:8px;border:1px solid #c0392b">Delete recipe</button>';
   h += '<button class="modal-cancel" onclick="closeRecipeDetail()">Close</button>';
   h += '</div></div>';
   document.body.insertAdjacentHTML('beforeend', h);
@@ -1054,6 +1133,20 @@ function getMealsForWeek(offset) {
   });
   return [...ids];
 }
+
+// Meal ids WITH multiplicity — one entry per day the recipe is planned, so a
+// recipe cooked on two days contributes its ingredients twice to the list.
+function getMealOccurrences(offset) {
+  const dates = getWeekDates(offset);
+  const ids = [];
+  dates.forEach(d => {
+    (state.calendar[dateKey(d)]||[]).forEach(id => ids.push(id));
+  });
+  return ids;
+}
+
+// The week's shopping-list checkbox key prefix (scopes checks to that week).
+function shopWeekKey(offset) { return dateKey(getWeekDates(offset)[0]); }
 
 function changeShopWeek(dir) { shopWeekOffset += dir; render(); }
 
@@ -1092,23 +1185,75 @@ function formatQty(num, unit) {
   else s = '' + whole;
   return unit ? s + ' ' + unit : s;
 }
+// Canonicalize a unit string, so "grams"/"g"/"gram" combine and "kg"+"g" convert.
+const UNIT_ALIASES = {
+  g:'g', gram:'g', grams:'g', gr:'g',
+  kg:'kg', kgs:'kg', kilogram:'kg', kilograms:'kg', kilo:'kg', kilos:'kg',
+  ml:'ml', milliliter:'ml', milliliters:'ml', millilitre:'ml', millilitres:'ml',
+  l:'l', liter:'l', liters:'l', litre:'l', litres:'l',
+  tsp:'tsp', teaspoon:'tsp', teaspoons:'tsp',
+  tbsp:'tbsp', tablespoon:'tbsp', tablespoons:'tbsp',
+  cup:'cup', cups:'cup', oz:'oz', ounce:'oz', ounces:'oz',
+  lb:'lb', lbs:'lb', pound:'lb', pounds:'lb',
+  clove:'clove', cloves:'clove', can:'can', cans:'can'
+};
+function canonUnit(u) { u = (u || '').toLowerCase().replace(/\./g, '').trim(); return UNIT_ALIASES[u] || u; }
+const MASS_TO_G = { g:1, kg:1000 };
+const VOL_TO_ML = { ml:1, l:1000 };
+
+// Combine two parsed quantities, converting across mass or volume units.
+// Returns a formatted string, or null if they can't be combined numerically.
+function combineParsed(a, b) {
+  const ua = canonUnit(a.unit), ub = canonUnit(b.unit);
+  if (ua === ub) return formatQty(a.num + b.num, ua);
+  if (MASS_TO_G[ua] && MASS_TO_G[ub]) {
+    const g = a.num * MASS_TO_G[ua] + b.num * MASS_TO_G[ub];
+    return g >= 1000 ? formatQty(g / 1000, 'kg') : formatQty(g, 'g');
+  }
+  if (VOL_TO_ML[ua] && VOL_TO_ML[ub]) {
+    const ml = a.num * VOL_TO_ML[ua] + b.num * VOL_TO_ML[ub];
+    return ml >= 1000 ? formatQty(ml / 1000, 'l') : formatQty(ml, 'ml');
+  }
+  return null;
+}
 function smartCombineQty(q1, q2) {
   const a = parseQty(q1), b = parseQty(q2);
-  if (!a || !b) return q1 + ' + ' + q2;
-  if (a.unit === b.unit) return formatQty(a.num + b.num, a.unit);
+  if (!a || !b) {
+    // Non-numeric (e.g. "to taste"): collapse duplicates instead of concatenating.
+    const s1 = (q1 || '').trim(), s2 = (q2 || '').trim();
+    if (!s1) return s2;
+    if (!s2) return s1;
+    if (s1.toLowerCase() === s2.toLowerCase()) return s1;
+    return s1 + ' + ' + s2;
+  }
+  const combined = combineParsed(a, b);
+  if (combined) return combined;
   if (q1 === q2) return '2× ' + q1;
   return q1 + ' + ' + q2;
 }
 
-function getShoppingList(mealIds) {
+// Normalize an ingredient name for de-duplication: drop parenthetical/footnote
+// notes and trailing prep clauses, keeping the identifying words. So "Boneless,
+// skinless chicken thighs (see note 1)" and "... (note 1)" merge into one line.
+function normIngredientName(name) {
+  return cleanItemNameForCopy(name)
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getShoppingList(mealIds, weekKey) {
   const catOrder = ['Meat','Produce','Dairy','Pantry','Spices','Noodles & Pasta'];
   const groups = {};
   const ids = mealIds || state.selected;
+  const wk = weekKey || '';
 
   ids.forEach(id => {
     const r = getAllRecipes().find(r => r.id === id);
     if (!r) return;
-    r.ingredients.forEach(g => {
+    (r.ingredients || []).forEach(g => {
       if (!groups[g.cat]) groups[g.cat] = [];
       g.items.forEach(item => {
         groups[g.cat].push({
@@ -1116,7 +1261,8 @@ function getShoppingList(mealIds) {
           qty: item.qty,
           meal: r.name,
           mealId: r.id,
-          key: r.id + '|' + item.name
+          // Week-scoped so checking an item off doesn't pre-check it in other weeks.
+          key: wk + '|' + r.id + '|' + item.name
         });
       });
     });
@@ -1127,16 +1273,11 @@ function getShoppingList(mealIds) {
     consolidated[cat] = [];
     const seen = {};
     groups[cat].forEach(item => {
-      const normName = item.name.toLowerCase().replace(/,.*$/,'').trim();
+      const normName = normIngredientName(item.name);
       if (seen[normName]) {
         seen[normName].meals.push(item.meal);
         seen[normName].keys.push(item.key);
-        if (item.qty !== seen[normName].qty) {
-          seen[normName].qty = smartCombineQty(seen[normName].qty, item.qty);
-        } else {
-          // Same qty from multiple recipes — sum them
-          seen[normName].qty = smartCombineQty(seen[normName].qty, item.qty);
-        }
+        seen[normName].qty = smartCombineQty(seen[normName].qty, item.qty);
       } else {
         const entry = {name: item.name, qty: item.qty, meals:[item.meal], keys:[item.key]};
         seen[normName] = entry;
@@ -1156,11 +1297,14 @@ function getShoppingList(mealIds) {
 }
 
 function render() {
+  // Preserve scroll across in-place re-renders (checking items, editing days).
+  // Tab switches reset scroll explicitly in showView().
+  const scrollY = window.scrollY;
   const browseEl = document.getElementById('browse-view');
   const listEl = document.getElementById('list-view');
 
   document.getElementById('browse-count').textContent = getAllRecipes().length || '';
-  const calWeekMealCount = getMealsForWeek(calWeekOffset).length;
+  const calWeekMealCount = getMealOccurrences(calWeekOffset).length;
   document.getElementById('meals-count').textContent = calWeekMealCount || '';
 
   // Browse/Recipes view with favorites on top, search + hidden filter
@@ -1180,7 +1324,7 @@ function render() {
   if (visible.length === 0 && !q && hiddenRecipes.length === 0) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes yet.<br>Add some from the Inbox tab or import a URL.</p><button class="empty-cta" onclick="showView(\'inbox\')">Discover recipes</button></div>';
   } else if (visible.length === 0 && q) {
-    browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match "' + browseSearch + '"</p></div>';
+    browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match "' + esc(browseSearch) + '"</p></div>';
   } else {
     if (favVisible.length > 0) {
       browseHTML += '<div class="section-label">&#11088; Favorites (' + favVisible.length + ')</div>';
@@ -1222,7 +1366,7 @@ function render() {
     } else {
       inboxHTML += '<div class="inbox-grid">';
       inboxMeals.forEach(function(recipe) {
-        var added = state.customRecipes.some(function(r) { return r.name.toLowerCase() === recipe.name.toLowerCase(); });
+        var added = state.customRecipes.some(function(r) { return !r.deleted && r.name.toLowerCase() === recipe.name.toLowerCase(); });
         var tagColorMap = {'one-pan':'var(--tomato)','one-pot':'var(--basil)','dairy-free':'var(--basil)','gluten-free':'var(--gold)','fakeaway':'var(--yolk)','vegetarian':'var(--basil)'};
         var tagBgMap = {'one-pan':'var(--accent-light)','one-pot':'var(--green-light)','dairy-free':'var(--green-light)','gluten-free':'var(--yolk-light)','fakeaway':'var(--yolk-light)','vegetarian':'var(--green-light)'};
         inboxHTML += '<div class="inbox-card"><div class="inbox-card-body">';
@@ -1276,7 +1420,7 @@ function render() {
       unassigned.forEach(r => {
         calHTML += '<div class="inbox-meal" data-drag-recipe="' + r.id + '" data-drag-from="">';
         calHTML += '<span class="drag-handle" data-drag-handle title="Drag to a day">&#8942;&#8942;</span>';
-        calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
+        calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</span>';
         calHTML += '<div class="inbox-meal-actions">';
         calHTML += '<button class="inbox-assign-btn" onclick="openInboxAssign(\'' + r.id + '\')">Assign</button>';
         calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\')" title="Remove meal">&times;</button>';
@@ -1304,7 +1448,7 @@ function render() {
         calHTML += '<div class="cal-meal" data-drag-recipe="' + r.id + '" data-drag-from="' + dk + '">';
         calHTML += '<span class="drag-handle" data-drag-handle title="Drag to move">&#8942;&#8942;</span>';
         calHTML += '<button class="cal-meal-type' + mtClass + '" onclick="event.stopPropagation();cycleMealType(\'' + dk + '\',\'' + r.id + '\')" title="Click to set meal type">' + mtLabel + '</button>';
-        calHTML += '<span class="cal-meal-name" onclick="event.stopPropagation();openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
+        calHTML += '<span class="cal-meal-name" onclick="event.stopPropagation();openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</span>';
         calHTML += '<span class="cal-meal-serves">serves ' + r.servings + '</span>';
         calHTML += '<button class="cal-meal-remove" onclick="removeMealFromDay(\'' + dk + '\',\'' + r.id + '\')">&times;</button></div>';
       });
@@ -1316,8 +1460,13 @@ function render() {
 
   // Shopping list view — filtered by week
   const shopDates = getWeekDates(shopWeekOffset);
-  const shopMealIds = getMealsForWeek(shopWeekOffset);
-  const shopList = getShoppingList(shopMealIds);
+  const shopWk = shopWeekKey(shopWeekOffset);
+  const shopMealIds = getMealOccurrences(shopWeekOffset);
+  const shopList = getShoppingList(shopMealIds, shopWk);
+  // Recipes planned this week that have no ingredients yet (e.g. link-only inbox adds).
+  const noIngRecipes = [...new Set(shopMealIds)]
+    .map(id => getAllRecipes().find(r => r.id === id))
+    .filter(r => r && (!r.ingredients || r.ingredients.reduce((s,g)=>s+g.items.length,0) === 0));
   const shopWeekLabel = fmtDate(shopDates[0]) + ' — ' + fmtDate(shopDates[6]);
   const shopIsThisWeek = shopWeekOffset === 0;
 
@@ -1366,31 +1515,44 @@ function render() {
     html += '</svg>';
     html += '<div class="progress-ring-info"><div class="pr-count">' + checkedItems + ' of ' + totalItems + ' items</div>';
     html += '<div class="pr-hint">' + hint + '</div></div></div>';
-    html += '<div class="list-actions"><button class="btn-outline" onclick="copyShoppingList()">&#128203; Copy list</button><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
+    html += '<div class="list-actions"><button class="btn-outline" id="copy-list-btn" onclick="copyShoppingList()">&#128203; Copy list</button><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
+
+    if (noIngRecipes.length > 0) {
+      html += '<div class="shop-warning" style="background:var(--yolk-light);border:1px solid var(--yolk);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--text)">';
+      html += '&#9888;&#65039; ' + noIngRecipes.length + ' recipe' + (noIngRecipes.length!==1?'s':'') + ' ' + (noIngRecipes.length!==1?'have':'has') + ' no ingredients yet, so ' + (noIngRecipes.length!==1?'they\'re':'it\'s') + ' not in the list: ';
+      html += noIngRecipes.map(r => '<a href="#" onclick="openIngredientEditor(\'' + r.id + '\');return false" style="color:var(--tomato);font-weight:600;text-decoration:none">' + esc(r.name) + '</a>').join(', ');
+      html += '</div>';
+    }
 
     shopList.forEach(group => {
-      html += '<div class="section-label">' + group.cat + '</div>';
+      html += '<div class="section-label">' + esc(group.cat) + '</div>';
       group.items.forEach(item => {
         const isChecked = item.keys.every(k => state.checked[k]);
         html += '<div class="shop-item' + (isChecked ? ' checked' : '') + '">';
-        html += '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onchange="toggleCheckGroup(\'' + item.keys.map(k=>k.replace(/'/g,"\\'")).join("','") + '\')">';
+        html += '<input type="checkbox" ' + (isChecked ? 'checked ' : '') + 'data-keys="' + esc(JSON.stringify([...new Set(item.keys)])) + '" onchange="toggleCheckFromEl(this)">';
         html += '<div class="item-details">';
-        html += '<div class="item-name">' + item.name + '</div>';
-        html += '<div class="item-qty">' + item.qty + '</div>';
+        html += '<div class="item-name">' + esc(item.name) + '</div>';
+        html += '<div class="item-qty">' + esc(item.qty) + '</div>';
         html += '<div class="item-meals">';
         const uniqueMeals = [...new Set(item.meals)];
         uniqueMeals.forEach(m => {
-          html += '<span class="meal-dot">' + m.split(' ').slice(0,3).join(' ') + '</span>';
+          html += '<span class="meal-dot">' + esc(m.split(' ').slice(0,3).join(' ')) + '</span>';
         });
         html += '</div></div></div>';
       });
     });
     listEl.innerHTML = html;
   }
+
+  // Keep the viewport where the user left it after an in-place re-render.
+  window.scrollTo(0, scrollY);
 }
 
-function toggleCheckGroup() {
-  const keys = Array.from(arguments);
+// Toggle a shop item whose keys are carried on the element (robust to quotes in
+// ingredient names, which broke the old inline-args approach).
+function toggleCheckFromEl(el) {
+  let keys = [];
+  try { keys = JSON.parse(el.getAttribute('data-keys')) || []; } catch(e) {}
   const allChecked = keys.every(k => state.checked[k]);
   keys.forEach(k => state.checked[k] = !allChecked);
   save();
@@ -1411,7 +1573,7 @@ function renderCard(r, isSelected, isHiddenCard) {
   const bc = getCardBorderClass(r);
   let html = '<div class="card ' + bc + (isHiddenCard ? ' hidden-card' : '') + '">';
   html += '<div class="card-header"><div class="card-title-row"><div>';
-  html += '<h3 onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</h3>';
+  html += '<h3 onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</h3>';
   html += '<div class="tags">';
   r.tags.forEach(t => {
     if (t==='dairy-free') html += '<span class="tag tag-df">DF</span>';
@@ -1421,7 +1583,7 @@ function renderCard(r, isSelected, isHiddenCard) {
   });
   html += '<span class="tag" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">serves ' + r.servings + '</span>';
   html += '</div>';
-  if (r.desc) html += '<div class="card-desc">' + r.desc + '</div>';
+  if (r.desc) html += '<div class="card-desc">' + esc(r.desc) + '</div>';
   html += '</div></div>';
   html += '<div class="card-actions">';
   if (isHiddenCard) {
@@ -1448,7 +1610,8 @@ let wizardPicked = [];
 function getWeekKey(d) {
   const mon = new Date(d);
   mon.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
-  return mon.toISOString().split('T')[0];
+  mon.setHours(0, 0, 0, 0);
+  return dateKey(mon);
 }
 
 // Saturday notification
@@ -1542,7 +1705,7 @@ function renderWizard() {
     }
     const isPicked = wizardPicked.includes(r.id);
     h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
-    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + r.name + '</div>';
+    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + esc(r.name) + '</div>';
     h += '<div class="wizard-recipe-meta">';
     r.tags.forEach(t => { h += t + ' · '; });
     h += 'serves ' + r.servings + '</div></div>';
@@ -1614,7 +1777,7 @@ function renderWizardStep2() {
     unassigned.forEach(id => {
       const r = getAllRecipes().find(r => r.id === id);
       if (!r) return;
-      h += '<span class="wizard-ua-chip" onclick="wizardQuickAssign(\'' + id + '\')">' + r.name + '</span>';
+      h += '<span class="wizard-ua-chip" onclick="wizardQuickAssign(\'' + id + '\')">' + esc(r.name) + '</span>';
     });
     h += '</div>';
   }
@@ -1628,7 +1791,7 @@ function renderWizardStep2() {
     h += '<div class="wizard-day-header"><span>' + dayName(d) + (today ? ' · Today' : '') + '</span><span class="wd-date">' + fmtDate(d) + '</span></div>';
     h += '<div class="wizard-day-meals">';
     meals.forEach(r => {
-      h += '<div class="wizard-day-meal"><span>' + r.name + '</span>';
+      h += '<div class="wizard-day-meal"><span>' + esc(r.name) + '</span>';
       h += '<button class="wdm-remove" onclick="wizardUnassign(\'' + dk + '\',\'' + r.id + '\')">&times;</button></div>';
     });
     h += '<button class="btn-add-meal" onclick="wizardPickForDay(\'' + dk + '\')">+ Add meal</button>';
@@ -1660,7 +1823,7 @@ function wizardQuickAssign(mealId) {
   if (!r) return;
   let h = '<div class="modal-overlay" id="wizard-daypick-modal" onclick="if(event.target===this)this.remove()">';
   h += '<div class="modal">';
-  h += '<h3>Assign ' + r.name + '</h3>';
+  h += '<h3>Assign ' + esc(r.name) + '</h3>';
   h += '<p class="modal-sub">Pick a day</p>';
   dates.forEach(d => {
     const dk = dateKey(d);
@@ -1721,13 +1884,14 @@ function wizardFinish() {
   wizardPicked.forEach(id => {
     if (!state.selected.includes(id)) state.selected.push(id);
   });
-  // Apply assignments to calendar
+  // Apply assignments to calendar. The wizard represents the full intended plan
+  // for this week, so emptied days must be cleared — not left with stale meals.
   const dates = getWeekDates(wizardWeekOffset);
   dates.forEach(d => {
     const dk = dateKey(d);
-    if (wizardAssignments[dk] && wizardAssignments[dk].length > 0) {
-      state.calendar[dk] = wizardAssignments[dk];
-    }
+    const a = wizardAssignments[dk] || [];
+    if (a.length > 0) state.calendar[dk] = a.slice();
+    else delete state.calendar[dk];
   });
   save();
   closeWizard();
@@ -1774,23 +1938,7 @@ async function doImport() {
   previewEl.innerHTML='';
 
   try {
-    // Try multiple CORS proxies
-    const proxies = [
-      { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(url), json: true, field: 'contents' },
-      { url: 'https://corsproxy.io/?' + encodeURIComponent(url), json: false },
-      { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), json: false }
-    ];
-    let html = null;
-    for (const proxy of proxies) {
-      try {
-        const res = await fetch(proxy.url);
-        if (!res.ok) continue;
-        if (proxy.json) { const d = await res.json(); html = d[proxy.field]; }
-        else { html = await res.text(); }
-        if (html && html.length > 500) break;
-        html = null;
-      } catch(e) { continue; }
-    }
+    const html = await fetchHtmlViaProxies(url);
     if (!html) throw new Error('Could not fetch page. The site may be blocking access.');
 
     const recipe = parseRecipeFromHtml(html, url);
@@ -1809,6 +1957,38 @@ async function doImport() {
     btn.textContent='Import Recipe';
     btn.onclick=doImport;
   }
+}
+
+// Fetch a page's HTML through CORS proxies. Returns the HTML string or null.
+async function fetchHtmlViaProxies(url) {
+  const proxies = [
+    { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(url), json: true, field: 'contents' },
+    { url: 'https://corsproxy.io/?' + encodeURIComponent(url), json: false },
+    { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), json: false }
+  ];
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy.url);
+      if (!res.ok) continue;
+      let html = proxy.json ? (await res.json())[proxy.field] : await res.text();
+      if (html && html.length > 500) return html;
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+// Split a raw ingredient line into { qty, name } by matching a leading amount+unit.
+function splitQtyName(raw) {
+  const ing = String(raw).replace(/<[^>]*>/g, '').trim();
+  const match = ing.match(/^([\d¼½¾⅓⅔⅛\s\/\.\-]+(?:\s*(?:cup|cups|tbsp|tsp|oz|lb|lbs|pound|pounds|g|kg|ml|L|clove|cloves|can|cans|bunch|head|large|medium|small|pinch|dash|to taste|tablespoon|tablespoons|teaspoon|teaspoons|ounce|ounces|slice|slices|piece|pieces)s?)?)\s+(.+)/i);
+  if (match) return { name: match[2].trim(), qty: match[1].trim() };
+  return { name: ing, qty: '' };
+}
+
+// Parse a textarea of ingredient lines (one per line) into categorized groups.
+function parseIngredientLines(text) {
+  const items = String(text).split('\n').map(l => l.trim()).filter(Boolean).map(splitQtyName);
+  return items.length ? autoCategorize(items) : [];
 }
 
 function autoCategorize(items) {
@@ -1888,13 +2068,7 @@ function buildRecipeFromLD(ld, url) {
 
   // Parse ingredients
   const rawIngredients = ld.recipeIngredient || ld.ingredients || [];
-  const items = rawIngredients.map(ing => {
-    ing = ing.replace(/<[^>]*>/g, '').trim();
-    // Try to split qty from name: match leading numbers/fractions/units
-    const match = ing.match(/^([\d¼½¾⅓⅔⅛\s\/\.\-]+(?:\s*(?:cup|cups|tbsp|tsp|oz|lb|lbs|pound|pounds|g|kg|ml|L|clove|cloves|can|cans|bunch|head|large|medium|small|pinch|dash|to taste|tablespoon|tablespoons|teaspoon|teaspoons|ounce|ounces|slice|slices|piece|pieces)s?)?)\s+(.+)/i);
-    if (match) return { name: match[2].trim(), qty: match[1].trim() };
-    return { name: ing, qty: '' };
-  });
+  const items = rawIngredients.map(splitQtyName);
 
   // Detect tags
   const tags = [];
@@ -1922,14 +2096,14 @@ function buildRecipeFromLD(ld, url) {
 
 function showImportPreview(recipe, container) {
   let h = '<div class="import-preview">';
-  h += '<h4>' + recipe.name + '</h4>';
-  h += '<div class="ip-meta">' + recipe.site + ' &middot; serves ' + recipe.servings + '</div>';
-  if (recipe.desc) h += '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">' + recipe.desc + '</div>';
+  h += '<h4>' + esc(recipe.name) + '</h4>';
+  h += '<div class="ip-meta">' + esc(recipe.site) + ' &middot; serves ' + esc(recipe.servings) + '</div>';
+  if (recipe.desc) h += '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">' + esc(recipe.desc) + '</div>';
   const totalIng = recipe.ingredients.reduce((s,g) => s + g.items.length, 0);
   recipe.ingredients.forEach(g => {
-    h += '<div class="ip-section">' + g.cat + ' (' + g.items.length + ')</div>';
+    h += '<div class="ip-section">' + esc(g.cat) + ' (' + g.items.length + ')</div>';
     g.items.slice(0, 10).forEach(item => {
-      h += '<div class="ip-item">' + (item.qty ? '<span style="color:var(--muted)">' + item.qty + '</span> ' : '') + item.name + '</div>';
+      h += '<div class="ip-item">' + (item.qty ? '<span style="color:var(--muted)">' + esc(item.qty) + '</span> ' : '') + esc(item.name) + '</div>';
     });
     if (g.items.length > 10) h += '<div class="ip-item" style="color:var(--muted)">+ ' + (g.items.length - 10) + ' more...</div>';
   });
@@ -1951,8 +2125,11 @@ function confirmImport(recipe) {
 }
 
 function deleteCustomRecipe(id) {
-  state.customRecipes = state.customRecipes.filter(r => r.id !== id);
-  // Also remove from selected, favorites, and calendar
+  // Tombstone rather than splice: keeps the id present so seedRecipes() can't
+  // resurrect a deleted seeded recipe, and the deletion syncs via custom_recipes.
+  const r = state.customRecipes.find(r => r.id === id);
+  if (r) r.deleted = true;
+  else state.customRecipes = state.customRecipes.filter(x => x.id !== id);
   state.selected = state.selected.filter(sid => sid !== id);
   state.favorites = state.favorites.filter(fid => fid !== id);
   Object.keys(state.calendar).forEach(dk => {
@@ -1960,10 +2137,45 @@ function deleteCustomRecipe(id) {
     if (state.calendar[dk].length === 0) delete state.calendar[dk];
   });
   Object.keys(state.checked).forEach(k => {
-    if (k.startsWith(id + '|')) delete state.checked[k];
+    if (keyMatchesRecipe(k, id)) delete state.checked[k];
   });
   save();
   render();
+}
+
+// Manual ingredient editor — lets any recipe (incl. link-only inbox adds and
+// seeded recipes) get real ingredients so it appears on the shopping list.
+function openIngredientEditor(id) {
+  const r = getAllRecipes().find(r => r.id === id);
+  if (!r) return;
+  const old = document.getElementById('ingredient-editor-modal');
+  if (old) old.remove();
+  const lines = [];
+  (r.ingredients || []).forEach(g => g.items.forEach(it => lines.push((it.qty ? it.qty + ' ' : '') + it.name)));
+  let h = '<div class="modal-overlay" id="ingredient-editor-modal" onclick="if(event.target===this)this.remove()">';
+  h += '<div class="modal" style="max-height:85vh">';
+  h += '<h3>Edit ingredients</h3>';
+  h += '<p class="modal-sub">' + esc(r.name) + ' — one ingredient per line, e.g. "500 g ground beef"</p>';
+  h += '<textarea id="ingredient-editor-text" class="import-input" style="min-height:220px;resize:vertical;font-family:var(--font-mono);font-size:13px;line-height:1.6">' + esc(lines.join('\n')) + '</textarea>';
+  h += '<div class="import-actions">';
+  h += '<button class="modal-cancel" onclick="this.closest(\'.modal-overlay\').remove()" style="width:auto;margin:0">Cancel</button>';
+  h += '<button class="btn-import" onclick="saveIngredientEdits(\'' + r.id + '\')">Save ingredients</button>';
+  h += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function saveIngredientEdits(id) {
+  const r = state.customRecipes.find(r => r.id === id);
+  const ta = document.getElementById('ingredient-editor-text');
+  if (!r || !ta) return;
+  r.ingredients = parseIngredientLines(ta.value);
+  r.linkOnly = false;
+  save();
+  const m = document.getElementById('ingredient-editor-modal');
+  if (m) m.remove();
+  closeRecipeDetail();
+  render();
+  showToast('Ingredients saved');
 }
 
 /* Clean an ingredient name for the copyable grocery list.
@@ -1983,8 +2195,8 @@ function cleanItemNameForCopy(raw) {
 
 /* ── Copy shopping list (name-first for DoorDash/Instacart) ── */
 function copyShoppingList() {
-  const shopMealIds = getMealsForWeek(shopWeekOffset);
-  const shopList = getShoppingList(shopMealIds);
+  const shopMealIds = getMealOccurrences(shopWeekOffset);
+  const shopList = getShoppingList(shopMealIds, shopWeekKey(shopWeekOffset));
   let lines = [];
   shopList.forEach(group => {
     group.items.forEach(item => {
@@ -1997,20 +2209,22 @@ function copyShoppingList() {
   });
   const text = lines.join('\n');
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.list-actions button');
+    const btn = document.getElementById('copy-list-btn');
+    if (!btn) return;
     const orig = btn.innerHTML;
     btn.innerHTML = '&#10003; Copied!';
-    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 1500);
   }).catch(() => {
     // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
     document.body.removeChild(ta);
-    const btn = document.querySelector('.list-actions button');
+    const btn = document.getElementById('copy-list-btn');
+    if (!btn) return;
     const orig = btn.innerHTML;
     btn.innerHTML = '&#10003; Copied!';
-    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 1500);
   });
 }
 
@@ -2056,42 +2270,63 @@ function getWeekNumber() {
 }
 
 function getInboxMeals() {
-  const existingNames = new Set(state.customRecipes.map(r => r.name.toLowerCase()));
+  const existingNames = new Set(state.customRecipes.filter(r => !r.deleted).map(r => r.name.toLowerCase()));
   const dismissedSet = new Set(inboxDismissed);
   let pool = INBOX_RECIPES.filter(r => !existingNames.has(r.name.toLowerCase()) && !dismissedSet.has(r.id));
   if (inboxCategory) pool = pool.filter(r => r.site === inboxCategory);
-  // Pick 5 per week using week number as seed
+  // Pick 5 per week with a genuinely week-dependent deterministic ordering.
   const week = getWeekNumber();
   const shuffled = pool.slice().sort(function(a, b) {
-    var ha = (week * 2654435761 + a.id.charCodeAt(a.id.length - 1) * 31) & 0xFFFFFFFF;
-    var hb = (week * 2654435761 + b.id.charCodeAt(b.id.length - 1) * 31) & 0xFFFFFFFF;
-    return ha - hb;
+    return hashStr(a.id + '|' + week) - hashStr(b.id + '|' + week);
   });
   return shuffled.slice(0, 5);
 }
 
 function filterInbox(category) { inboxCategory = category || ''; render(); }
 
-function addFromInbox(id) {
+async function addFromInbox(id) {
   const recipe = INBOX_RECIPES.find(r => r.id === id);
   if (!recipe) return;
-  if (state.customRecipes.some(r => r.name.toLowerCase() === recipe.name.toLowerCase())) {
+  if (state.customRecipes.some(r => !r.deleted && r.name.toLowerCase() === recipe.name.toLowerCase())) {
     showToast('Already in collection');
     return;
   }
-  state.customRecipes.push({
-    id: recipe.id,
-    name: recipe.name,
-    site: recipe.site,
-    url: recipe.url,
-    desc: recipe.desc,
-    tags: recipe.tags || [],
-    servings: recipe.servings || 4,
-    ingredients: [],
-    custom: true
-  });
+  // Add immediately (optimistic), reviving a tombstone if this was deleted before.
+  let rec = state.customRecipes.find(r => r.id === recipe.id);
+  if (rec) {
+    rec.deleted = false;
+    rec.ingredients = [];
+  } else {
+    rec = {
+      id: recipe.id, name: recipe.name, site: recipe.site, url: recipe.url,
+      desc: recipe.desc, tags: recipe.tags || [], servings: recipe.servings || 4,
+      ingredients: [], custom: true, linkOnly: true
+    };
+    state.customRecipes.push(rec);
+  }
+  rec.linkOnly = true;
   save(); render();
-  showToast(recipe.name + ' added!');
+  showToast(recipe.name + ' added — fetching ingredients…');
+
+  // Then try to enrich it with real ingredients from the source page.
+  try {
+    const html = await fetchHtmlViaProxies(recipe.url);
+    const parsed = html ? parseRecipeFromHtml(html, recipe.url) : null;
+    const count = parsed && parsed.ingredients ? parsed.ingredients.reduce((s,g) => s + g.items.length, 0) : 0;
+    const target = state.customRecipes.find(r => r.id === recipe.id);
+    if (target && !target.deleted && count > 0) {
+      target.ingredients = parsed.ingredients;
+      target.linkOnly = false;
+      if (parsed.servings) target.servings = parsed.servings;
+      if (!target.desc && parsed.desc) target.desc = parsed.desc;
+      save(); render();
+      showToast(recipe.name + ' — ingredients added ✓');
+    } else {
+      showToast(recipe.name + ' added — tap “Edit ingredients” to add them');
+    }
+  } catch(e) {
+    showToast(recipe.name + ' added — couldn’t fetch ingredients');
+  }
 }
 
 function skipInboxMeal(id) {
