@@ -761,7 +761,12 @@ function toggleCheck(key) {
 }
 
 function uncheckAll() {
-  state.checked = {};
+  // Clear only this week's ingredient checks — leave other weeks and the
+  // shopping-completed flags untouched.
+  const prefix = shopWeekKey(shopWeekOffset) + '|';
+  Object.keys(state.checked).forEach(k => {
+    if (k.indexOf(prefix) === 0) delete state.checked[k];
+  });
   save();
   render();
 }
@@ -1148,6 +1153,19 @@ function getMealOccurrences(offset) {
 // The week's shopping-list checkbox key prefix (scopes checks to that week).
 function shopWeekKey(offset) { return dateKey(getWeekDates(offset)[0]); }
 
+// Per-week "shopping completed" flag, stored in the synced `checked` map under a
+// reserved key so it syncs across devices without a schema change (and never
+// collides with item keys, which look like `weekKey|recipeId|itemName`).
+function shopDoneKey(offset) { return 'shop-done:' + shopWeekKey(offset); }
+function isShopDone(offset) { return !!state.checked[shopDoneKey(offset)]; }
+function toggleShopDone() {
+  const k = shopDoneKey(shopWeekOffset);
+  if (state.checked[k]) delete state.checked[k];
+  else state.checked[k] = true;
+  save();
+  render();
+}
+
 function changeShopWeek(dir) { shopWeekOffset += dir; render(); }
 
 function parseQty(s) {
@@ -1521,14 +1539,15 @@ function render() {
       if (item.keys.every(k => state.checked[k])) checkedItems++;
     }));
     const remaining = totalItems - checkedItems;
-    document.getElementById('list-count').textContent = remaining > 0 ? remaining : (checkedItems > 0 ? '✓' : '');
+    const shopDone = isShopDone(shopWeekOffset);
+    document.getElementById('list-count').textContent = shopDone ? '✓' : (remaining > 0 ? remaining : (checkedItems > 0 ? '✓' : ''));
 
     const pct = totalItems ? Math.round((checkedItems / totalItems) * 100) : 0;
     const circ = 2 * Math.PI * 34;
     const offset = circ - (circ * pct / 100);
     // Find a contextual hint
     let hint = '';
-    if (pct === 100) { hint = 'All done!'; }
+    if (pct === 100) { hint = 'All checked — mark it done below'; }
     else if (pct === 0) { hint = 'Start checking items off'; }
     else {
       const doneCategories = [];
@@ -1540,16 +1559,29 @@ function render() {
       else hint = 'Keep going!';
     }
     let html = shopHeader;
-    html += '<div class="progress-ring-wrap">';
-    html += '<svg width="72" height="72" viewBox="0 0 80 80">';
-    html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="6"/>';
-    html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+offset.toFixed(1)+'" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 0.4s"/>';
-    html += '<text x="40" y="37" text-anchor="middle" font-size="18" font-weight="600" fill="var(--text)">' + pct + '%</text>';
-    html += '<text x="40" y="52" text-anchor="middle" font-size="9" fill="var(--muted)">' + checkedItems + '/' + totalItems + '</text>';
-    html += '</svg>';
-    html += '<div class="progress-ring-info"><div class="pr-count">' + checkedItems + ' of ' + totalItems + ' items</div>';
-    html += '<div class="pr-hint">' + hint + '</div></div></div>';
+    if (shopDone) {
+      // Completed state: a clear banner instead of the progress ring.
+      html += '<div class="shop-done-banner" style="display:flex;align-items:center;gap:12px;background:var(--green);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:16px">';
+      html += '<div style="font-size:30px;line-height:1">&#9989;</div>';
+      html += '<div style="flex:1"><div style="font-family:var(--font-display);font-size:18px;font-weight:800">Shopping complete</div>';
+      html += '<div style="font-size:13px;opacity:0.9">' + esc(shopWeekLabel) + ' &middot; ' + totalItems + ' item' + (totalItems!==1?'s':'') + '</div></div>';
+      html += '<button class="btn-outline" style="background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.45)" onclick="toggleShopDone()">Reopen</button>';
+      html += '</div>';
+    } else {
+      html += '<div class="progress-ring-wrap">';
+      html += '<svg width="72" height="72" viewBox="0 0 80 80">';
+      html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="6"/>';
+      html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+offset.toFixed(1)+'" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 0.4s"/>';
+      html += '<text x="40" y="37" text-anchor="middle" font-size="18" font-weight="600" fill="var(--text)">' + pct + '%</text>';
+      html += '<text x="40" y="52" text-anchor="middle" font-size="9" fill="var(--muted)">' + checkedItems + '/' + totalItems + '</text>';
+      html += '</svg>';
+      html += '<div class="progress-ring-info"><div class="pr-count">' + checkedItems + ' of ' + totalItems + ' items</div>';
+      html += '<div class="pr-hint">' + hint + '</div></div></div>';
+    }
     html += '<div class="list-actions"><button class="btn-outline" id="copy-list-btn" onclick="copyShoppingList()">&#128203; Copy list</button><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
+    if (!shopDone) {
+      html += '<button class="btn btn-add" style="width:100%;margin:0 0 16px;padding:13px;background:var(--green);border-color:var(--green)" onclick="toggleShopDone()">&#10003; Mark shopping done</button>';
+    }
 
     if (noIngRecipes.length > 0) {
       html += '<div class="shop-warning" style="background:var(--yolk-light);border:1px solid var(--yolk);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--text)">';
@@ -1558,6 +1590,7 @@ function render() {
       html += '</div>';
     }
 
+    if (shopDone) html += '<div style="opacity:0.5">';
     shopList.forEach(group => {
       html += '<div class="section-label">' + esc(group.cat) + '</div>';
       group.items.forEach(item => {
@@ -1575,6 +1608,7 @@ function render() {
         html += '</div></div></div>';
       });
     });
+    if (shopDone) html += '</div>';
     listEl.innerHTML = html;
   }
 
