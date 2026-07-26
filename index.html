@@ -1966,6 +1966,21 @@ function deleteCustomRecipe(id) {
   render();
 }
 
+/* Clean an ingredient name for the copyable grocery list.
+   Removes parenthetical notes and a trailing prep/qualifier clause (", diced",
+   ", shredded", ", large", ", for serving"…), but NEVER drops the part of the
+   name that identifies the item. So "Boneless, skinless chicken breast" stays
+   whole, while "Cheddar cheese, shredded" becomes "Cheddar cheese". */
+function cleanItemNameForCopy(raw) {
+  var n = String(raw).replace(/\([^)]*\)/g, '').trim();   // drop (optional), (for sauce), etc.
+  var prep = /^(diced|chopped|minced|sliced|shredded|grated|crushed|crumbled|ground|uncooked|cooked|drained|rinsed|peeled|seeded|halved|quartered|cubed|julienned|thinly sliced|finely chopped|roughly chopped|large|small|medium|to taste|to serve|for serving|for garnish|optional)\b/i;
+  var parts = n.split(',');
+  while (parts.length > 1 && prep.test(parts[parts.length - 1].trim())) {
+    parts.pop();
+  }
+  return parts.join(',').replace(/\s+/g, ' ').replace(/[,\s]+$/, '').trim();
+}
+
 /* ── Copy shopping list (name-first for DoorDash/Instacart) ── */
 function copyShoppingList() {
   const shopMealIds = getMealsForWeek(shopWeekOffset);
@@ -1975,7 +1990,7 @@ function copyShoppingList() {
     group.items.forEach(item => {
       const isChecked = item.keys.every(k => state.checked[k]);
       if (isChecked) return; // skip checked items
-      const name = item.name.replace(/,.*$/, '').trim(); // clean trailing qualifiers
+      const name = cleanItemNameForCopy(item.name); // keep item identity, drop only prep qualifiers
       const qty = item.qty;
       lines.push(qty ? name + ' (' + qty + ')' : name);
     });
