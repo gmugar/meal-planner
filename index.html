@@ -99,6 +99,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .cal-meal-serves{font-size:11px;color:var(--muted);margin:0 8px;flex-shrink:0}
 .cal-meal-remove{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 2px;line-height:1}
 .cal-meal-remove:active{color:var(--accent)}
+/* Drag & drop (mouse + touch) */
+.drag-handle{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:22px;align-self:stretch;margin-right:2px;color:var(--muted);font-size:15px;line-height:1;cursor:grab;opacity:0.55;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.drag-handle:hover{opacity:1}
+.drag-handle:active{cursor:grabbing}
+.dragging-source{opacity:0.4}
+.drag-ghost{position:fixed;top:0;left:0;z-index:9999;pointer-events:none;background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 8px 24px rgba(45,27,14,0.25);opacity:0.96;max-width:70vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;will-change:transform}
+.drop-target-active{outline:2px dashed var(--accent);outline-offset:-3px;background:var(--accent-light)}
 .cal-meal-type{font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:6px;border:none;background:var(--text);color:var(--card);cursor:pointer;flex-shrink:0;text-transform:uppercase;letter-spacing:0.5px;font-weight:500}
 .cal-meal-type:active{opacity:0.8}
 .cal-meal-type.mt-breakfast{background:var(--yolk);color:var(--text)}
@@ -846,6 +853,123 @@ function removeMealFromDay(dateStr, mealId) {
   render();
 }
 
+function moveMealToDay(fromDate, toDate, mealId) {
+  if (!toDate || fromDate === toDate) return;
+  if (fromDate && state.calendar[fromDate]) {
+    state.calendar[fromDate] = state.calendar[fromDate].filter(id => id !== mealId);
+    if (state.calendar[fromDate].length === 0) delete state.calendar[fromDate];
+  }
+  if (!state.selected.includes(mealId)) state.selected.push(mealId);
+  if (!state.calendar[toDate]) state.calendar[toDate] = [];
+  if (!state.calendar[toDate].includes(mealId)) state.calendar[toDate].push(mealId);
+  save();
+  render();
+}
+
+/* ── Drag & drop: drag a recipe (by its grip handle) onto a day. Works with
+   mouse and touch via Pointer Events. The tap-to-Assign buttons remain as a
+   fallback. Only the grip handle has touch-action:none, so page scrolling on
+   touch devices is unaffected. ── */
+(function initMealDrag() {
+  var THRESHOLD = 6;      // px of movement before a press becomes a drag
+  var start = null, dragging = false, ghost = null, lastZone = null, suppressClick = false;
+
+  function moveGhost(x, y) {
+    if (ghost) ghost.style.transform = 'translate(' + (x + 12) + 'px,' + (y + 14) + 'px)';
+  }
+
+  function zoneAt(x, y) {
+    if (ghost) ghost.style.display = 'none';
+    var el = document.elementFromPoint(x, y);
+    if (ghost) ghost.style.display = '';
+    return el && el.closest ? el.closest('[data-drop-date]') : null;
+  }
+
+  function highlight(zone) {
+    if (zone === lastZone) return;
+    if (lastZone) lastZone.classList.remove('drop-target-active');
+    if (zone) zone.classList.add('drop-target-active');
+    lastZone = zone;
+  }
+
+  function beginDrag() {
+    dragging = true;
+    start.el.classList.add('dragging-source');
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.textContent = start.name;
+    document.body.appendChild(ghost);
+    moveGhost(start.x, start.y);
+  }
+
+  function cleanup() {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    if (ghost) { ghost.remove(); ghost = null; }
+    if (lastZone) { lastZone.classList.remove('drop-target-active'); lastZone = null; }
+    if (start && start.el) start.el.classList.remove('dragging-source');
+    start = null; dragging = false;
+  }
+
+  function onDown(e) {
+    if (e.button != null && e.button !== 0) return;   // primary button / touch only
+    var handle = e.target.closest && e.target.closest('[data-drag-handle]');
+    if (!handle) return;
+    var item = handle.closest('[data-drag-recipe]');
+    if (!item) return;
+    var label = item.querySelector('.inbox-meal-name, .cal-meal-name');
+    start = {
+      x: e.clientX, y: e.clientY,
+      recipe: item.getAttribute('data-drag-recipe'),
+      from: item.getAttribute('data-drag-from') || '',
+      el: item,
+      name: label ? label.textContent : 'Meal'
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  }
+
+  function onMove(e) {
+    if (!start) return;
+    if (!dragging) {
+      if (Math.abs(e.clientX - start.x) < THRESHOLD && Math.abs(e.clientY - start.y) < THRESHOLD) return;
+      beginDrag();
+    }
+    e.preventDefault();
+    moveGhost(e.clientX, e.clientY);
+    highlight(zoneAt(e.clientX, e.clientY));
+  }
+
+  function onUp(e) {
+    if (!start) { cleanup(); return; }
+    if (dragging) {
+      var zone = zoneAt(e.clientX, e.clientY);
+      var recipe = start.recipe, from = start.from;
+      suppressClick = true;
+      setTimeout(function () { suppressClick = false; }, 60);
+      cleanup();
+      if (zone) {
+        var to = zone.getAttribute('data-drop-date');
+        if (to && to !== from) {
+          if (from) moveMealToDay(from, to, recipe);
+          else addMealToDay(to, recipe);
+        }
+      }
+      return;
+    }
+    cleanup();
+  }
+
+  // Swallow the synthetic click that follows a drag so it doesn't open a modal.
+  document.addEventListener('click', function (e) {
+    if (suppressClick) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+
+  document.addEventListener('pointerdown', onDown);
+})();
+
 function openInboxAssign(mealId) {
   const r = getAllRecipes().find(r => r.id === mealId);
   if (!r) return;
@@ -1150,7 +1274,8 @@ function render() {
       calHTML += '<div class="inbox-section">';
       calHTML += '<div class="inbox-label">&#128229; Unassigned (' + unassigned.length + ')</div>';
       unassigned.forEach(r => {
-        calHTML += '<div class="inbox-meal">';
+        calHTML += '<div class="inbox-meal" data-drag-recipe="' + r.id + '" data-drag-from="">';
+        calHTML += '<span class="drag-handle" data-drag-handle title="Drag to a day">&#8942;&#8942;</span>';
         calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
         calHTML += '<div class="inbox-meal-actions">';
         calHTML += '<button class="inbox-assign-btn" onclick="openInboxAssign(\'' + r.id + '\')">Assign</button>';
@@ -1165,7 +1290,7 @@ function render() {
       const today = isToday(d);
       const past = isPast(d);
       const meals = (state.calendar[dk]||[]).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
-      calHTML += '<div class="cal-day' + (today?' today':'') + (past?' past':'') + '">';
+      calHTML += '<div class="cal-day' + (today?' today':'') + (past?' past':'') + '"' + (past?'':' data-drop-date="' + dk + '"') + '>';
       calHTML += '<div class="cal-day-header"><span class="day-name">' + dayName(d) + (today?' · Today':'') + '</span>';
       calHTML += '<span style="display:flex;align-items:center;gap:6px">';
       if (meals.length > 0) calHTML += '<span class="cal-day-count">' + meals.length + ' meal' + (meals.length!==1?'s':'') + '</span>';
@@ -1176,7 +1301,8 @@ function render() {
         const mt = state.mealTypes[mtKey] || '';
         const mtClass = mt ? ' mt-' + mt : '';
         const mtLabel = mt || 'meal';
-        calHTML += '<div class="cal-meal">';
+        calHTML += '<div class="cal-meal" data-drag-recipe="' + r.id + '" data-drag-from="' + dk + '">';
+        calHTML += '<span class="drag-handle" data-drag-handle title="Drag to move">&#8942;&#8942;</span>';
         calHTML += '<button class="cal-meal-type' + mtClass + '" onclick="event.stopPropagation();cycleMealType(\'' + dk + '\',\'' + r.id + '\')" title="Click to set meal type">' + mtLabel + '</button>';
         calHTML += '<span class="cal-meal-name" onclick="event.stopPropagation();openRecipeDetail(\'' + r.id + '\')">' + r.name + '</span>';
         calHTML += '<span class="cal-meal-serves">serves ' + r.servings + '</span>';
