@@ -1100,7 +1100,7 @@ function openRecipeDetail(mealId) {
     h += '<div class="detail-section">' + esc(g.cat) + '</div>';
     g.items.forEach(item => {
       h += '<div class="detail-ingredient"><span class="detail-ing-name">' + esc(item.name) + '</span>';
-      h += '<span class="detail-ing-qty">' + esc(item.qty) + '</span></div>';
+      h += '<span class="detail-ing-qty">' + esc(toImperialQty(item.qty)) + '</span></div>';
     });
   });
   if (!r.ingredients || r.ingredients.reduce((s,g)=>s+g.items.length,0) === 0) {
@@ -1185,7 +1185,7 @@ function formatQty(num, unit) {
   else s = '' + whole;
   return unit ? s + ' ' + unit : s;
 }
-// Canonicalize a unit string, so "grams"/"g"/"gram" combine and "kg"+"g" convert.
+// Canonicalize a unit string so aliases combine ("grams"→g) and units convert.
 const UNIT_ALIASES = {
   g:'g', gram:'g', grams:'g', gr:'g',
   kg:'kg', kgs:'kg', kilogram:'kg', kilograms:'kg', kilo:'kg', kilos:'kg',
@@ -1194,26 +1194,54 @@ const UNIT_ALIASES = {
   tsp:'tsp', teaspoon:'tsp', teaspoons:'tsp',
   tbsp:'tbsp', tablespoon:'tbsp', tablespoons:'tbsp',
   cup:'cup', cups:'cup', oz:'oz', ounce:'oz', ounces:'oz',
+  floz:'floz', 'fl oz':'floz', 'fluid ounce':'floz', 'fluid ounces':'floz',
   lb:'lb', lbs:'lb', pound:'lb', pounds:'lb',
   clove:'clove', cloves:'clove', can:'can', cans:'can'
 };
 function canonUnit(u) { u = (u || '').toLowerCase().replace(/\./g, '').trim(); return UNIT_ALIASES[u] || u; }
-const MASS_TO_G = { g:1, kg:1000 };
-const VOL_TO_ML = { ml:1, l:1000 };
 
-// Combine two parsed quantities, converting across mass or volume units.
-// Returns a formatted string, or null if they can't be combined numerically.
+// Imperial output. Metric mass/volume are converted to oz/lb and cups/fl oz/tbsp;
+// cooking units the recipe already wrote in imperial (cup, tbsp, tsp) are kept.
+const MASS_TO_OZ = { g:0.03527396, kg:35.27396, oz:1, lb:16 };
+const VOL_TO_FLOZ = { ml:0.03381402, l:33.81402, floz:1, cup:8, tbsp:0.5, tsp:0.1666667 };
+
+function formatMassImperial(oz) {
+  return Math.round(oz) >= 16 ? formatQty(oz / 16, 'lb') : formatQty(Math.round(oz), 'oz');
+}
+function formatVolImperial(floz) {
+  if (floz >= 7.5) return formatQty(floz / 8, 'cups');
+  if (floz >= 1)   return formatQty(floz, 'fl oz');
+  const tbsp = floz * 2;
+  if (tbsp >= 0.75) return formatQty(Math.round(tbsp), 'tbsp');
+  return formatQty(Math.max(1, Math.round(floz * 6)), 'tsp');
+}
+
+// Convert a single quantity string to imperial. Metric mass/volume convert;
+// oz/lb are tidied (16 oz → 1 lb); other units/strings pass through unchanged.
+function toImperialQty(str) {
+  const p = parseQty(str);
+  if (!p) return str;
+  const u = canonUnit(p.unit);
+  if (MASS_TO_OZ[u]) return formatMassImperial(p.num * MASS_TO_OZ[u]);
+  if (u === 'ml' || u === 'l') return formatVolImperial(p.num * VOL_TO_FLOZ[u]);
+  return str;
+}
+
+// Combine two parsed quantities into imperial, converting across compatible
+// units. Returns a formatted string, or null if they can't be combined.
 function combineParsed(a, b) {
   const ua = canonUnit(a.unit), ub = canonUnit(b.unit);
+  if (MASS_TO_OZ[ua] && MASS_TO_OZ[ub]) {
+    return formatMassImperial(a.num * MASS_TO_OZ[ua] + b.num * MASS_TO_OZ[ub]);
+  }
+  if (VOL_TO_FLOZ[ua] && VOL_TO_FLOZ[ub]) {
+    // Keep a shared imperial cooking unit (tbsp+tbsp → tbsp); otherwise normalize.
+    if (ua === ub && (ua === 'cup' || ua === 'tbsp' || ua === 'tsp')) {
+      return formatQty(a.num + b.num, ua === 'cup' ? 'cups' : ua);
+    }
+    return formatVolImperial(a.num * VOL_TO_FLOZ[ua] + b.num * VOL_TO_FLOZ[ub]);
+  }
   if (ua === ub) return formatQty(a.num + b.num, ua);
-  if (MASS_TO_G[ua] && MASS_TO_G[ub]) {
-    const g = a.num * MASS_TO_G[ua] + b.num * MASS_TO_G[ub];
-    return g >= 1000 ? formatQty(g / 1000, 'kg') : formatQty(g, 'g');
-  }
-  if (VOL_TO_ML[ua] && VOL_TO_ML[ub]) {
-    const ml = a.num * VOL_TO_ML[ua] + b.num * VOL_TO_ML[ub];
-    return ml >= 1000 ? formatQty(ml / 1000, 'l') : formatQty(ml, 'ml');
-  }
   return null;
 }
 function smartCombineQty(q1, q2) {
@@ -1284,6 +1312,12 @@ function getShoppingList(mealIds, weekKey) {
         consolidated[cat].push(entry);
       }
     });
+  });
+
+  // Display every quantity in imperial (single items that were never combined
+  // are still metric here; combined ones are already imperial and pass through).
+  Object.keys(consolidated).forEach(cat => {
+    consolidated[cat].forEach(entry => { entry.qty = toImperialQty(entry.qty); });
   });
 
   const sorted = [];
