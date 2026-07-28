@@ -2331,6 +2331,33 @@ const INBOX_RECIPES = [
 let inboxCategory = '';
 let inboxDismissed = JSON.parse(localStorage.getItem('inboxDismissed') || '[]');
 
+// The inbox draws from inboxPool. It starts as the hardcoded INBOX_RECIPES and is
+// replaced/augmented by inbox.json (refreshed weekly by the scrape-inbox GitHub
+// Action) once that loads. Falls back to the hardcoded list if the fetch fails.
+let inboxPool = INBOX_RECIPES.slice();
+
+async function loadInboxFeed() {
+  try {
+    const res = await fetch('inbox.json?t=' + Date.now()); // cache-bust the weekly file
+    if (!res.ok) return;
+    const data = await res.json();
+    const scraped = Array.isArray(data) ? data : (data.recipes || []);
+    if (!Array.isArray(scraped) || scraped.length === 0) return;
+    // Fresh scraped recipes first, then hardcoded ones, deduped by name.
+    const seen = new Set(), merged = [];
+    [...scraped, ...INBOX_RECIPES].forEach(r => {
+      const k = (r && r.name || '').toLowerCase().trim();
+      if (!k || seen.has(k)) return;
+      seen.add(k);
+      merged.push(r);
+    });
+    inboxPool = merged;
+    render();
+  } catch(e) {
+    console.log('inbox.json unavailable, using built-in list:', e.message);
+  }
+}
+
 function getWeekNumber() {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 1);
@@ -2340,7 +2367,7 @@ function getWeekNumber() {
 function getInboxMeals() {
   const existingNames = new Set(state.customRecipes.filter(r => !r.deleted).map(r => r.name.toLowerCase()));
   const dismissedSet = new Set(inboxDismissed);
-  let pool = INBOX_RECIPES.filter(r => !existingNames.has(r.name.toLowerCase()) && !dismissedSet.has(r.id));
+  let pool = inboxPool.filter(r => !existingNames.has(r.name.toLowerCase()) && !dismissedSet.has(r.id));
   if (inboxCategory) pool = pool.filter(r => r.site === inboxCategory);
   // Pick 5 per week with a genuinely week-dependent deterministic ordering.
   const week = getWeekNumber();
@@ -2353,30 +2380,40 @@ function getInboxMeals() {
 function filterInbox(category) { inboxCategory = category || ''; render(); }
 
 async function addFromInbox(id) {
-  const recipe = INBOX_RECIPES.find(r => r.id === id);
+  const recipe = inboxPool.find(r => r.id === id) || INBOX_RECIPES.find(r => r.id === id);
   if (!recipe) return;
   if (state.customRecipes.some(r => !r.deleted && r.name.toLowerCase() === recipe.name.toLowerCase())) {
     showToast('Already in collection');
     return;
   }
+  // Scraped recipes (from inbox.json) already carry ingredients — use them directly.
+  const feedIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+  const feedCount = feedIngredients.reduce((s,g) => s + (g.items ? g.items.length : 0), 0);
+
   // Add immediately (optimistic), reviving a tombstone if this was deleted before.
   let rec = state.customRecipes.find(r => r.id === recipe.id);
   if (rec) {
     rec.deleted = false;
-    rec.ingredients = [];
+    rec.ingredients = feedCount > 0 ? feedIngredients : [];
   } else {
     rec = {
       id: recipe.id, name: recipe.name, site: recipe.site, url: recipe.url,
       desc: recipe.desc, tags: recipe.tags || [], servings: recipe.servings || 4,
-      ingredients: [], custom: true, linkOnly: true
+      ingredients: feedCount > 0 ? feedIngredients : [], custom: true, linkOnly: feedCount === 0
     };
     state.customRecipes.push(rec);
+  }
+  if (feedCount > 0) {
+    rec.linkOnly = false;
+    save(); render();
+    showToast(recipe.name + ' added ✓');
+    return;
   }
   rec.linkOnly = true;
   save(); render();
   showToast(recipe.name + ' added — fetching ingredients…');
 
-  // Then try to enrich it with real ingredients from the source page.
+  // No ingredients in the feed — try to enrich from the source page (older entries).
   try {
     const html = await fetchHtmlViaProxies(recipe.url);
     const parsed = html ? parseRecipeFromHtml(html, recipe.url) : null;
@@ -2406,6 +2443,7 @@ function skipInboxMeal(id) {
 
 checkSaturdayNotification();
 render();
+loadInboxFeed();
 </script>
 </body>
 </html>
