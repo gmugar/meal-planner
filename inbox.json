@@ -1,7 +1,160 @@
 {
-  "generatedAt": "2026-07-28T20:11:23.685Z",
-  "count": 18,
+  "generatedAt": "2026-08-03T12:51:57.993Z",
+  "count": 17,
   "recipes": [
+    {
+      "id": "feed_simple-home-edit_cheesy-baked-chicken-tacos",
+      "name": "Cheesy Baked Chicken Tacos",
+      "site": "Simple Home Edit",
+      "url": "https://simplehomeedit.com/recipe/cheesy-baked-chicken-tacos/",
+      "desc": "These Cheesy Baked Chicken Tacos are an easy chicken dinner made with juicy seasoned chicken, sweet corn and melted cheese, all baked inside soft tortillas until the tops are golden and crispy. This f",
+      "tags": [],
+      "servings": 4,
+      "ingredients": [
+        {
+          "cat": "Meat",
+          "items": [
+            {
+              "name": "boneless, skinless chicken thighs, cut into 1–2 cm (½–¾ inch) pieces (see note 1 for chicken breast)",
+              "qty": "500 g"
+            },
+            {
+              "name": "ground cumin",
+              "qty": "1 tsp"
+            }
+          ]
+        },
+        {
+          "cat": "Produce",
+          "items": [
+            {
+              "name": "red onion, finely diced",
+              "qty": "1 small"
+            },
+            {
+              "name": "freshly minced garlic",
+              "qty": "1 tsp"
+            },
+            {
+              "name": "red capsicum (bell pepper), finely diced",
+              "qty": "1"
+            },
+            {
+              "name": "corn kernels (fresh, frozen or tinned)",
+              "qty": "150 g"
+            },
+            {
+              "name": "onion powder",
+              "qty": "1 tsp"
+            },
+            {
+              "name": "freshly cracked black pepper",
+              "qty": "¼ tsp"
+            },
+            {
+              "name": "tomato paste",
+              "qty": "2 tbsp"
+            },
+            {
+              "name": "avocado",
+              "qty": "1"
+            },
+            {
+              "name": "fresh lime juice",
+              "qty": "1 tbsp"
+            },
+            {
+              "name": "garlic clove, minced",
+              "qty": "½"
+            },
+            {
+              "name": "coriander (cilantro)",
+              "qty": "¼ bunch"
+            },
+            {
+              "name": "finely chopped coriander (cilantro)",
+              "qty": "2 tbsp"
+            },
+            {
+              "name": "Lime wedges (optional)",
+              "qty": ""
+            }
+          ]
+        },
+        {
+          "cat": "Dairy",
+          "items": [
+            {
+              "name": "cream cheese, softened (optional, see note 2)",
+              "qty": "3 tbsp"
+            },
+            {
+              "name": "grated Mexican cheese",
+              "qty": "250 g"
+            }
+          ]
+        },
+        {
+          "cat": "Pantry",
+          "items": [
+            {
+              "name": "olive oil",
+              "qty": "2 tbsp"
+            },
+            {
+              "name": "dried oregano",
+              "qty": "1 tsp"
+            },
+            {
+              "name": "Olive oil spray",
+              "qty": ""
+            },
+            {
+              "name": "mini flour street tacos (about 11.5 cm/4½ inches)",
+              "qty": "10"
+            }
+          ]
+        },
+        {
+          "cat": "Spices",
+          "items": [
+            {
+              "name": "sweet paprika",
+              "qty": "2 tsp"
+            },
+            {
+              "name": "sea salt flakes",
+              "qty": "1 tsp"
+            },
+            {
+              "name": "sea salt flakes",
+              "qty": "¼ tsp"
+            }
+          ]
+        },
+        {
+          "cat": "Other",
+          "items": [
+            {
+              "name": "water",
+              "qty": "60 ml"
+            },
+            {
+              "name": "Greek yoghurt",
+              "qty": "125 g"
+            },
+            {
+              "name": "jalapeño, halved and seeds removed (optional)",
+              "qty": "1"
+            },
+            {
+              "name": "water",
+              "qty": "2 tbsp"
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "feed_simple-home-edit_soy-braised-chicken",
       "name": "Soy-braised Chicken",
@@ -735,26 +888,26 @@
       ]
     },
     {
-      "id": "feed_simple-home-edit_italian-style-meatballs",
-      "name": "Italian-style Meatballs",
-      "site": "Simple Home Edit",
-      "url": "https://simplehomeedit.com/recipe/italian-style-meatballs/",
-      "desc": "Soft, cheesy Italian-style Meatballs gently simmered in a rich tomato sauce until perfectly tender. With no frying required and everything cooked in the one pan, this comforting family dinner feels in",
+      "id": "feed_budget-bytes_skillet-pizza-casserole",
+      "name": "Skillet Pizza Casserole",
+      "site": "Budget Bytes",
+      "url": "https://www.budgetbytes.com/skillet-pizza-casserole/",
+      "desc": "This cheesy Skillet Pizza Casserole recipe combines saucy pasta, Italian sausage, veggies, pepperoni, and melty mozzarella in one easy pan dinner!",
       "tags": [
         "one-pan"
       ],
-      "servings": 4,
+      "servings": 6,
       "ingredients": [
         {
           "cat": "Meat",
           "items": [
             {
-              "name": "minced (ground) pork (see note 1 for subs)",
-              "qty": "250 g"
+              "name": "lb. ground Italian sausage ($3.62*)",
+              "qty": "1"
             },
             {
-              "name": "minced (ground) beef (see note 1 for subs)",
-              "qty": "250 g"
+              "name": "pepperoni slices (50g, $0.85)",
+              "qty": "25"
             }
           ]
         },
@@ -762,32 +915,24 @@
           "cat": "Produce",
           "items": [
             {
-              "name": "onion, finely diced",
+              "name": "yellow onion (diced, (145g) $0.70)",
+              "qty": "1 small"
+            },
+            {
+              "name": "green bell pepper (diced, (145g) $0.86)",
               "qty": "1"
             },
             {
-              "name": "freshly minced garlic",
-              "qty": "1 tsp"
+              "name": "garlic cloves (minced, $0.22)",
+              "qty": "3"
             },
             {
-              "name": "freshly chopped flat-leaf parsley",
-              "qty": "¼ bunch"
-            },
-            {
-              "name": "freshly minced garlic",
-              "qty": "1 tsp"
-            },
-            {
-              "name": "freshly cracked black pepper",
+              "name": "crushed red pepper flakes (optional, $0.01)",
               "qty": "¼ tsp"
             },
             {
-              "name": "basil leaves, to serve",
-              "qty": "¼ bunch"
-            },
-            {
-              "name": "Minute Cheesy Garlic Bread",
-              "qty": "5"
+              "name": "black pepper (freshly cracked, $0.04)",
+              "qty": "¼ tsp"
             }
           ]
         },
@@ -795,24 +940,8 @@
           "cat": "Dairy",
           "items": [
             {
-              "name": "full-cream (whole) milk",
-              "qty": "2 tbsp"
-            },
-            {
-              "name": "egg",
-              "qty": "1"
-            },
-            {
-              "name": "freshly grated parmesan, plus extra to serve",
-              "qty": "50 g"
-            },
-            {
-              "name": "freshly grated mozzarella",
-              "qty": "75 g"
-            },
-            {
-              "name": "unsalted butter",
-              "qty": "2 tbsp"
+              "name": "mozzarella cheese (shredded, $1.47)",
+              "qty": "1½ cups"
             }
           ]
         },
@@ -820,16 +949,12 @@
           "cat": "Pantry",
           "items": [
             {
-              "name": "extra-virgin olive oil",
-              "qty": "1 tbsp"
+              "name": "oz. rotini pasta (uncooked, $0.54**)",
+              "qty": "8"
             },
             {
-              "name": "olive oil",
-              "qty": "1 tbsp"
-            },
-            {
-              "name": "canned whole tomatoes (can be substituted with crushed tomatoes or passata)",
-              "qty": "800 g"
+              "name": "oz. pasta sauce ($1.58***)",
+              "qty": "24"
             }
           ]
         },
@@ -837,12 +962,12 @@
           "cat": "Spices",
           "items": [
             {
-              "name": "sea salt flakes",
-              "qty": "¾ tsp"
+              "name": "Italian seasoning ($0.04)",
+              "qty": "1 tsp"
             },
             {
-              "name": "sea salt flakes",
-              "qty": "½ tsp"
+              "name": "salt ($0.02)",
+              "qty": "¼ tsp"
             }
           ]
         },
@@ -850,12 +975,70 @@
           "cat": "Other",
           "items": [
             {
-              "name": "panko breadcrumbs",
-              "qty": "60 g"
+              "name": "oz. mushrooms (sliced, (120g) $2.04)",
+              "qty": "8"
             },
             {
-              "name": "water",
-              "qty": "125 ml"
+              "name": "water ($0.00)",
+              "qty": "1 cup"
+            },
+            {
+              "name": "black olives (sliced, (28g) $0.32)",
+              "qty": "¼ cup"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "feed_budget-bytes_pita-bread",
+      "name": "Homemade Pita Bread",
+      "site": "Budget Bytes",
+      "url": "https://www.budgetbytes.com/pita-bread/",
+      "desc": "Make your own Homemade Pita Bread with this fun, simple recipe. This bread can be used for sandwiches, wraps, salads, or even baked into chips!",
+      "tags": [],
+      "servings": 8,
+      "ingredients": [
+        {
+          "cat": "Pantry",
+          "items": [
+            {
+              "name": "granulated sugar (6g, $0.01)",
+              "qty": "1½ tsp"
+            },
+            {
+              "name": "olive oil (15ml, $0.17)",
+              "qty": "1 Tbsp"
+            },
+            {
+              "name": "whole wheat flour (60g, $0.16)",
+              "qty": "½ cup"
+            },
+            {
+              "name": "all-purpose flour (300g, $0.32)",
+              "qty": "2½ cups"
+            }
+          ]
+        },
+        {
+          "cat": "Spices",
+          "items": [
+            {
+              "name": "salt (5g, $0.04)",
+              "qty": "1 tsp"
+            }
+          ]
+        },
+        {
+          "cat": "Other",
+          "items": [
+            {
+              "name": "warm water (270ml, $0.00)",
+              "qty": "1⅛ cup"
+            },
+            {
+              "name": "instant yeast (5g, $0.24)",
+              "qty": "1½ tsp"
             }
           ]
         }
@@ -1340,197 +1523,24 @@
       ]
     },
     {
-      "id": "feed_budget-bytes_creamy-garlic-mushroom-chicken",
-      "name": "Creamy Garlic Mushroom Chicken",
-      "site": "Budget Bytes",
-      "url": "https://www.budgetbytes.com/creamy-garlic-mushroom-chicken/",
-      "desc": "A simple pan sauce saves the day in this quick and easy Creamy Mushroom Chicken made with juicy thighs, mushrooms, garlic, Parmesan, and half-and-half!",
-      "tags": [],
-      "servings": 4,
-      "ingredients": [
-        {
-          "cat": "Meat",
-          "items": [
-            {
-              "name": "chicken thighs (boneless & skinless, $4.80*)",
-              "qty": "4"
-            },
-            {
-              "name": "chicken broth ($0.06**)",
-              "qty": "½ cup"
-            }
-          ]
-        },
-        {
-          "cat": "Produce",
-          "items": [
-            {
-              "name": "black pepper (freshly cracked, $0.04)",
-              "qty": "¼ tsp"
-            },
-            {
-              "name": "garlic cloves (minced, $0.32)",
-              "qty": "2 tsp"
-            },
-            {
-              "name": "fresh parsley (for garnish, (optional) $0.17)",
-              "qty": ""
-            }
-          ]
-        },
-        {
-          "cat": "Dairy",
-          "items": [
-            {
-              "name": "Parmesan cheese (grated, $0.37****)",
-              "qty": "¼ cup"
-            }
-          ]
-        },
-        {
-          "cat": "Pantry",
-          "items": [
-            {
-              "name": "cooking oil ($0.04)",
-              "qty": "1 Tbsp"
-            }
-          ]
-        },
-        {
-          "cat": "Spices",
-          "items": [
-            {
-              "name": "salt ($0.02)",
-              "qty": "½ tsp"
-            }
-          ]
-        },
-        {
-          "cat": "Other",
-          "items": [
-            {
-              "name": "oz. mushrooms (sliced, $1.78)",
-              "qty": "8"
-            },
-            {
-              "name": "half and half (room temperature, $0.74***)",
-              "qty": "1 cup"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "feed_budget-bytes_cold-sesame-noodles",
-      "name": "Cold Sesame Noodles",
-      "site": "Budget Bytes",
-      "url": "https://www.budgetbytes.com/cold-sesame-noodles/",
-      "desc": "These Cold Sesame Noodles are an easy, light noodle salad with spaghetti, crisp veggies, toasted sesame oil, soy sauce, lime, and sriracha!",
-      "tags": [],
-      "servings": 4,
-      "ingredients": [
-        {
-          "cat": "Produce",
-          "items": [
-            {
-              "name": "red bell pepper (sliced thin, (julienne cut) $1.48**)",
-              "qty": "1"
-            },
-            {
-              "name": "clamshell fresh basil (minced, (0.25 oz) $0.89)",
-              "qty": "½"
-            },
-            {
-              "name": "lime ($0.25)",
-              "qty": "1"
-            }
-          ]
-        },
-        {
-          "cat": "Pantry",
-          "items": [
-            {
-              "name": "sriracha ($0.05)",
-              "qty": "½ Tbsp"
-            },
-            {
-              "name": "toasted sesame oil ($0.64***)",
-              "qty": "2 Tbsp"
-            },
-            {
-              "name": "soy sauce ($0.10)",
-              "qty": "2 Tbsp"
-            }
-          ]
-        },
-        {
-          "cat": "Other",
-          "items": [
-            {
-              "name": "lb. spaghetti (uncooked, $0.49*)",
-              "qty": "½"
-            },
-            {
-              "name": "grape tomatoes (quartered, $0.75)",
-              "qty": "½ cup"
-            },
-            {
-              "name": "green onions (sliced, $1.04)",
-              "qty": "3"
-            },
-            {
-              "name": "sesame seeds ($0.42)",
-              "qty": "1 Tbsp"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "feed_half-baked-harvest_peanut-chicken-ramen-salad",
-      "name": "Peanut Chicken Ramen Salad",
+      "id": "feed_half-baked-harvest_blueberry-muffin-ice-cream-cake",
+      "name": "Blueberry Muffin Ice Cream Cake",
       "site": "Half Baked Harvest",
-      "url": "https://www.halfbakedharvest.com/peanut-chicken-ramen-salad/?adt_ei=*|EMAIL|*",
-      "desc": "Crunchy peanut ramen salad with shredded chicken, fresh herbs, and a creamy red curry peanut dressing. Easy, fresh, and perfect for summer!",
+      "url": "https://www.halfbakedharvest.com/blueberry-muffin-ice-cream-cake/?adt_ei=*|EMAIL|*",
+      "desc": "Blueberry Muffin Ice Cream Cake with vanilla ice cream, blueberry jam, and a buttery graham cracker crust. The perfect easy summer dessert!",
       "tags": [],
-      "servings": 6,
+      "servings": 10,
       "ingredients": [
-        {
-          "cat": "Meat",
-          "items": [
-            {
-              "name": "cooked shredded chicken",
-              "qty": "2 cups"
-            }
-          ]
-        },
-        {
-          "cat": "Produce",
-          "items": [
-            {
-              "name": "Napa cabbage, shredded",
-              "qty": "4 cups"
-            },
-            {
-              "name": "bag (12 ounces) broccoli slaw",
-              "qty": "1"
-            },
-            {
-              "name": "chopped fresh cilantro",
-              "qty": "1/2 cup"
-            },
-            {
-              "name": "chopped fresh basil",
-              "qty": "1/2 cup"
-            }
-          ]
-        },
         {
           "cat": "Dairy",
           "items": [
             {
-              "name": "creamy peanut butter",
-              "qty": "1/3 cup"
+              "name": "salted butter, melted",
+              "qty": "7 tablespoons"
+            },
+            {
+              "name": "pints vanilla ice cream (slightly softened)",
+              "qty": "3"
             }
           ]
         },
@@ -1538,33 +1548,12 @@
           "cat": "Pantry",
           "items": [
             {
-              "name": "rice vinegar",
+              "name": "brown sugar",
               "qty": "1/4 cup"
             },
             {
-              "name": "tamari or soy sauce",
-              "qty": "2 tablespoons"
-            },
-            {
-              "name": "toasted sesame oil",
-              "qty": "2 tablespoons"
-            },
-            {
-              "name": "olive oil",
-              "qty": "2 tablespoons"
-            },
-            {
-              "name": "honey or maple syrup",
-              "qty": "2 teaspoons"
-            }
-          ]
-        },
-        {
-          "cat": "Spices",
-          "items": [
-            {
-              "name": "Thai red curry paste ((or sambal oelek))",
-              "qty": "2 teaspoons"
+              "name": "coconut oil",
+              "qty": "1 tablespoon"
             }
           ]
         },
@@ -1572,139 +1561,27 @@
           "cat": "Other",
           "items": [
             {
-              "name": "to 3 squares ramen noodles, crushed ((discard the seasoning packets, I use Lotus foods ramen noodles))",
-              "qty": "2"
+              "name": "full sheets graham crackers",
+              "qty": "8"
             },
             {
-              "name": "green onions, chopped",
-              "qty": "4"
+              "name": "gingersnap cookies",
+              "qty": "8"
             },
             {
-              "name": "roasted salted peanuts, chopped",
-              "qty": "1 cup"
+              "name": "jar (12 to 16 ounce) blueberry jam",
+              "qty": "1"
             },
             {
-              "name": "sesame seeds",
-              "qty": "2 teaspoons"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "feed_half-baked-harvest_peach-sheet-cake",
-      "name": "Peach Sheet Cake with Brown Butter Frosting",
-      "site": "Half Baked Harvest",
-      "url": "https://www.halfbakedharvest.com/peach-sheet-cake/?adt_ei=*|EMAIL|*",
-      "desc": "This peach sheet cake is layered with juicy peaches, raspberry jam, and rich brown butter maple frosting for the ultimate summer dessert.",
-      "tags": [],
-      "servings": 18,
-      "ingredients": [
-        {
-          "cat": "Meat",
-          "items": [
-            {
-              "name": "ground cinnamon",
-              "qty": "1 teaspoon"
-            }
-          ]
-        },
-        {
-          "cat": "Dairy",
-          "items": [
-            {
-              "name": "sour cream, at room temperature",
-              "qty": "1/2 cup"
+              "name": "blueberry muffins",
+              "qty": "12"
             },
             {
-              "name": "eggs, at room temperature",
-              "qty": "3 large"
+              "name": "white chocolate, chopped",
+              "qty": "6 ounces"
             },
             {
-              "name": "milk, at room temperature",
-              "qty": "1 cup"
-            },
-            {
-              "name": "sticks salted butter, cubed",
-              "qty": "2"
-            },
-            {
-              "name": "cream cheese, at room temperature",
-              "qty": "3 ounces"
-            }
-          ]
-        },
-        {
-          "cat": "Pantry",
-          "items": [
-            {
-              "name": "granulated sugar",
-              "qty": "1 tablespoon"
-            },
-            {
-              "name": "melted coconut oil",
-              "qty": "1 cup"
-            },
-            {
-              "name": "granulated sugar",
-              "qty": "3/4 cup"
-            },
-            {
-              "name": "brown sugar",
-              "qty": "3/4"
-            },
-            {
-              "name": "all purpose flour",
-              "qty": "3 cups"
-            },
-            {
-              "name": "powdered sugar",
-              "qty": "2-3 cups"
-            },
-            {
-              "name": "real maple syrup",
-              "qty": "1/3 cup"
-            }
-          ]
-        },
-        {
-          "cat": "Spices",
-          "items": [
-            {
-              "name": "vanilla extract",
-              "qty": "1 tablespoon"
-            },
-            {
-              "name": "salt",
-              "qty": "1 teaspoon"
-            },
-            {
-              "name": "vanilla extract",
-              "qty": "2 teaspoons"
-            }
-          ]
-        },
-        {
-          "cat": "Other",
-          "items": [
-            {
-              "name": "chopped fresh or frozen peaches ((about 5 peaches))",
-              "qty": "2 1/2 cups"
-            },
-            {
-              "name": "raspberry jam",
-              "qty": "1/3 cup"
-            },
-            {
-              "name": "baking powder",
-              "qty": "1 1/2 teaspoons"
-            },
-            {
-              "name": "baking soda",
-              "qty": "1/2 teaspoon"
-            },
-            {
-              "name": "very tiny fresh or frozen raspberries",
+              "name": "fresh or frozen blueberries (for the top)",
               "qty": ""
             }
           ]
@@ -1712,11 +1589,11 @@
       ]
     },
     {
-      "id": "feed_half-baked-harvest_bang-bang-salmon-bowls",
-      "name": "Bang Bang Salmon Bowls with Pineapple Slaw",
+      "id": "feed_half-baked-harvest_honey-soy-steak",
+      "name": "Honey Soy Steak with Cherry Tomato Salad",
       "site": "Half Baked Harvest",
-      "url": "https://www.halfbakedharvest.com/bang-bang-salmon-bowls/?adt_ei=*|EMAIL|*",
-      "desc": "Bang Bang Salmon Bowls with pineapple slaw, avocado, and homemade bang bang sauce. An easy 30-minute dinner packed with bold flavor.",
+      "url": "https://www.halfbakedharvest.com/honey-soy-steak/?adt_ei=*|EMAIL|*",
+      "desc": "Tender honey soy steak served with a cherry tomato salad, ciabatta, and a flavorful ponzu marinade. A simple summer dinner for any night!",
       "tags": [],
       "servings": 6,
       "ingredients": [
@@ -1724,8 +1601,8 @@
           "cat": "Meat",
           "items": [
             {
-              "name": "(4 to 6 ounce) salmon fillets, cut into bite-size chunks",
-              "qty": "4"
+              "name": "flank steak, 4-6 beef tenderloin fillets, or 4 pounds boneless beef short ribs",
+              "qty": "2 pounds"
             }
           ]
         },
@@ -1733,36 +1610,41 @@
           "cat": "Produce",
           "items": [
             {
-              "name": "sweet Thai chili sauce",
-              "qty": "1/3 cup"
+              "name": "lemon juice",
+              "qty": "2 tablespoons"
             },
             {
-              "name": "lime zest",
-              "qty": "2 teaspoons"
+              "name": "lime juice",
+              "qty": "2 tablespoons"
             },
             {
-              "name": "bag coleslaw mix or 3 cups shredded cabbage",
+              "name": "shallot, thinly sliced",
               "qty": "1"
             },
             {
-              "name": "chopped fresh cilantro and basil",
-              "qty": "1/2 cup"
+              "name": "black pepper",
+              "qty": ""
             },
             {
-              "name": "chipotle chili powder",
-              "qty": "1 teaspoon"
+              "name": "baby basil",
+              "qty": "1 cup"
+            },
+            {
+              "name": "watercress or arugula",
+              "qty": "2 cups"
             },
             {
               "name": "sea salt and black pepper",
               "qty": ""
-            },
+            }
+          ]
+        },
+        {
+          "cat": "Dairy",
+          "items": [
             {
-              "name": "nori sheets, avocado, and green onions, for serving",
-              "qty": ""
-            },
-            {
-              "name": "sweet Thai chili sauce",
-              "qty": "1/4 cup"
+              "name": "crumbled feta or goat cheese",
+              "qty": "1 cup"
             }
           ]
         },
@@ -1770,28 +1652,36 @@
           "cat": "Pantry",
           "items": [
             {
-              "name": "mayo",
+              "name": "loaf ciabatta bread, (thickly sliced )",
+              "qty": "1"
+            },
+            {
+              "name": "tamari or soy sauce",
               "qty": "1/2 cup"
             },
             {
-              "name": "tamari or soy sauce",
-              "qty": "1 tablespoon"
+              "name": "ponzu sauce",
+              "qty": "1/2 cup"
             },
             {
-              "name": "Japanese pineapple BBQ sauce or teriyaki sauce",
-              "qty": "1/4 cup"
-            },
-            {
-              "name": "cooked rice",
-              "qty": "2 cups"
-            },
-            {
-              "name": "tamari or soy sauce",
+              "name": "rice vinegar",
               "qty": "1/3 cup"
             },
             {
-              "name": "toasted sesame oil",
-              "qty": "1 tablespoon"
+              "name": "honey",
+              "qty": "2 tablespoons"
+            },
+            {
+              "name": "olive oil",
+              "qty": "3 tablespoons"
+            },
+            {
+              "name": "extra virgin olive oil",
+              "qty": "⅓ cup"
+            },
+            {
+              "name": "champagne vinegar",
+              "qty": "⅓ cup"
             }
           ]
         },
@@ -1799,12 +1689,12 @@
           "cat": "Other",
           "items": [
             {
-              "name": "chopped pineapple",
-              "qty": "2 cups"
+              "name": "shallots, thinly sliced",
+              "qty": "2 small"
             },
             {
-              "name": "toasted sesame seeds",
-              "qty": "1 tablespoon"
+              "name": "a mix sungold and red cherry tomatoes, halved",
+              "qty": "4 cups"
             }
           ]
         }
