@@ -2357,16 +2357,32 @@ function copyShoppingList() {
     });
   });
   const text = lines.join('\n');
-  // Copy is the terminal act of the weekly ritual — confirm loudly, point at the destination.
+  // Copy is the terminal act of the weekly ritual — confirm, then close the loop
+  // with a completion banner that returns to Home (which shows the planned week).
   const copied = function() {
     const n = lines.length;
     const btn = document.getElementById('copy-list-btn');
     if (btn) {
       const orig = btn.innerHTML;
       btn.innerHTML = '&#10003; Copied!';
-      setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 1500);
+      setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 2500);
     }
-    showToast(n + ' item' + (n!==1?'s':'') + ' copied — paste into DoorDash or Instacart');
+    const listEl = document.getElementById('list-view');
+    if (listEl) {
+      let banner = document.getElementById('ritual-done');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'ritual-done';
+        listEl.insertBefore(banner, listEl.firstChild);
+      }
+      banner.style.cssText = 'background:var(--green);color:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)';
+      banner.innerHTML =
+        '<div style="font-family:var(--font-display);font-size:20px;font-weight:800;margin-bottom:4px">&#127881; Your week is planned</div>' +
+        '<div style="font-size:13px;opacity:0.92;margin-bottom:14px">' + n + ' item' + (n!==1?'s':'') + ' copied — paste into DoorDash or Instacart to order.</div>' +
+        '<button style="background:#fff;color:var(--green-text);border:none;font-weight:700;padding:12px 18px;border-radius:10px;width:100%;font-size:15px;cursor:pointer" onclick="showView(\'home\')">Back to this week &#8250;</button>';
+      banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    showToast(n + ' item' + (n!==1?'s':'') + ' copied');
   };
   navigator.clipboard.writeText(text).then(copied).catch(() => {
     // Fallback for older browsers
