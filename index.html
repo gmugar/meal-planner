@@ -1786,6 +1786,7 @@ function renderWizard() {
   h += '<div class="wizard-body">';
   h += '<div class="wizard-step">Step 1 of 3 &middot; Gather</div>';
   h += '<p class="wizard-hint">Pull from your library, or go find something new on your sites.</p>';
+  h += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button></div>';
 
   // The basket — what's picked for this week so far
   if (wizardPicked.length > 0) {
