@@ -1764,6 +1764,7 @@ let wizardSearch = '';
 function renderWizard() {
   wizardStep = 1;
   const old = document.getElementById('planning-wizard');
+  const prevScroll = old ? old.scrollTop : 0; // keep place across the rebuild
   if (old) old.remove();
   const dates = getWeekDates(wizardWeekOffset);
   const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
@@ -1842,6 +1843,7 @@ function renderWizard() {
 
   document.body.insertAdjacentHTML('beforeend', h);
   if (wizardSearch) filterWizardList(wizardSearch);
+  document.getElementById('planning-wizard').scrollTop = prevScroll;
 }
 
 // Hide non-matching library rows in place (no re-render, keeps typing focus).
@@ -1882,6 +1884,7 @@ function wizardContinue() {
 function renderWizardStep2() {
   wizardStep = 2;
   const old = document.getElementById('planning-wizard');
+  const prevScroll = old ? old.scrollTop : 0; // keep place across the rebuild
   if (old) old.remove();
   const dates = getWeekDates(wizardWeekOffset);
   const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
@@ -1935,6 +1938,7 @@ function renderWizardStep2() {
   h += '</div></div>';
 
   document.body.insertAdjacentHTML('beforeend', h);
+  document.getElementById('planning-wizard').scrollTop = prevScroll;
 }
 
 function wizardBackToStep1() {
