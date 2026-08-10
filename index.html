@@ -1765,6 +1765,7 @@ function renderWizard() {
   wizardStep = 1;
   const old = document.getElementById('planning-wizard');
   const prevScroll = old ? old.scrollTop : 0; // keep place across the rebuild
+  const prevHeight = old ? old.scrollHeight : 0;
   if (old) old.remove();
   const dates = getWeekDates(wizardWeekOffset);
   const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
@@ -1843,7 +1844,11 @@ function renderWizard() {
 
   document.body.insertAdjacentHTML('beforeend', h);
   if (wizardSearch) filterWizardList(wizardSearch);
-  document.getElementById('planning-wizard').scrollTop = prevScroll;
+  // Compensate for the basket appearing/growing above the list: the only height
+  // change in Gather is above the scroll position, so shift by the height delta
+  // to keep the library rows visually anchored.
+  const nw = document.getElementById('planning-wizard');
+  nw.scrollTop = Math.max(0, prevScroll + (nw.scrollHeight - prevHeight));
 }
 
 // Hide non-matching library rows in place (no re-render, keeps typing focus).
@@ -1885,6 +1890,7 @@ function renderWizardStep2() {
   wizardStep = 2;
   const old = document.getElementById('planning-wizard');
   const prevScroll = old ? old.scrollTop : 0; // keep place across the rebuild
+  const prevHeight = old ? old.scrollHeight : 0;
   if (old) old.remove();
   const dates = getWeekDates(wizardWeekOffset);
   const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
