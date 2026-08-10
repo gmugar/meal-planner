@@ -281,6 +281,30 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .btn-hide{background:none;border:none;font-size:16px;cursor:pointer;padding:4px;line-height:1;color:var(--border);transition:all 0.15s}
 .btn-hide:hover{color:var(--muted)}
 .btn-hide:active{color:var(--accent)}
+/* ── Home (This week) ── */
+.home-hero{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--tomato);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.home-hero-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-text);margin-bottom:6px}
+.home-hero-name{font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.2;cursor:pointer}
+.home-hero-name:hover{color:var(--tomato)}
+.home-hero-meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:4px}
+.home-week{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--card);margin-bottom:14px;box-shadow:var(--shadow)}
+.home-week-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);font-size:14px}
+.home-week-row:last-child{border-bottom:none}
+.home-week-row.today{background:var(--accent-light)}
+.home-week-row.past{opacity:.55}
+.hw-day{font-family:var(--font-mono);font-size:11px;color:var(--muted);width:34px;flex-shrink:0}
+.home-week-row.today .hw-day{color:var(--accent-text);font-weight:700}
+.hw-meals{flex:1;min-width:0}
+.hw-meal{cursor:pointer}
+.hw-meal:hover{color:var(--tomato)}
+.hw-add{color:var(--muted);cursor:pointer;font-size:13px}
+.hw-add:hover{color:var(--tomato)}
+.hw-date{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.home-links{display:flex;gap:20px;padding:2px 4px}
+.home-links a{font-size:13px;color:var(--accent-text);text-decoration:none;font-weight:600}
+.home-links a:hover{color:var(--tomato)}
+.view-back{display:inline-block;font-size:13px;color:var(--accent-text);text-decoration:none;font-weight:600;margin-bottom:10px}
+.view-back:hover{color:var(--tomato)}
 </style>
 </head>
 <body>
@@ -288,20 +312,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 <div class="header">
   <h1><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--tomato);border-radius:8px;margin-right:2px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><line x1="20" y1="12" x2="23" y2="12"/></svg></span>Skillet <span class="sync-dot connecting" id="sync-dot" title="connecting..."></span></h1>
   <div class="header-actions">
-    <button class="plan-go" onclick="openImportModal()"><span class="btn-text">+ Add Recipe</span><span class="btn-icon" style="display:none">+</span></button>
-    <button class="plan-go" onclick="openWeekPicker()"><span class="btn-text">+ New Plan</span><span class="btn-icon" style="display:none">&#128197;</span></button>
+    <button class="plan-go" onclick="openWeekPicker()"><span class="btn-text">Plan week</span><span class="btn-icon" style="display:none">&#128197;</span></button>
   </div>
 </div>
 <div id="plan-notification"></div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showView('inbox')"><span class="tab-icon">&#128229;</span>Inbox<span class="badge" id="inbox-count"></span></button>
-  <button class="tab" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Recipes<span class="badge" id="browse-count">0</span></button>
-  <button class="tab" onclick="showView('calendar')"><span class="tab-icon">&#128197;</span>Calendar<span class="badge" id="meals-count">0</span></button>
-  <button class="tab" onclick="showView('list')"><span class="tab-icon">&#128722;</span>Shop<span class="badge" id="list-count">0</span></button>
+  <button class="tab active" onclick="showView('home')"><span class="tab-icon">&#127859;</span>This week</button>
+  <button class="tab" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Library<span class="badge" id="browse-count">0</span></button>
 </div>
 
-<div id="inbox-view" class="view active"></div>
+<div id="home-view" class="view active"></div>
 <div id="browse-view" class="view"></div>
 <div id="calendar-view" class="view"></div>
 <div id="list-view" class="view"></div>
@@ -320,6 +341,18 @@ function esc(s) {
     return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
   });
 }
+// Recipe source sites (sources.json) — surfaced in the Plan ritual's Gather step.
+let recipeSources = [];
+(async function loadSources() {
+  try {
+    const res = await fetch('sources.json');
+    if (res.ok) {
+      const d = await res.json();
+      if (Array.isArray(d)) recipeSources = d;
+    }
+  } catch(e) {}
+})();
+
 // FNV-1a string hash + finalizing avalanche → unsigned 32-bit, for deterministic
 // seeded ordering. The final mix is essential: without it, changing only the last
 // character (e.g. the week digit) barely perturbs the hash, so the ordering wouldn't
@@ -514,6 +547,8 @@ function seedRecipes() {
   });
 }
 seedRecipes();
+// Drop legacy per-week "shop done" flags (feature removed — copy is the terminal act).
+Object.keys(state.checked).forEach(k => { if (k.indexOf('shop-done:') === 0) delete state.checked[k]; });
 persistLocal();
 
 // Visible recipes exclude tombstones (see deleteCustomRecipe).
@@ -662,9 +697,12 @@ loadFromSupabase();
 function showView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  const views = ['inbox','browse','calendar','list'];
-  document.getElementById(view+'-view').classList.add('active');
-  document.querySelectorAll('.tab')[views.indexOf(view)].classList.add('active');
+  const el = document.getElementById(view + '-view');
+  if (!el) view = 'home';
+  document.getElementById(view + '-view').classList.add('active');
+  // Two tabs: "This week" owns home + its sub-surfaces (calendar editor, list); Library is browse.
+  const tabIdx = view === 'browse' ? 1 : 0;
+  document.querySelectorAll('.tab')[tabIdx].classList.add('active');
   if (view === 'list') shopWeekOffset = calWeekOffset;
   render();
   window.scrollTo(0, 0); // fresh tab starts at the top
@@ -1153,18 +1191,6 @@ function getMealOccurrences(offset) {
 // The week's shopping-list checkbox key prefix (scopes checks to that week).
 function shopWeekKey(offset) { return dateKey(getWeekDates(offset)[0]); }
 
-// Per-week "shopping completed" flag, stored in the synced `checked` map under a
-// reserved key so it syncs across devices without a schema change (and never
-// collides with item keys, which look like `weekKey|recipeId|itemName`).
-function shopDoneKey(offset) { return 'shop-done:' + shopWeekKey(offset); }
-function isShopDone(offset) { return !!state.checked[shopDoneKey(offset)]; }
-function toggleShopDone() {
-  const k = shopDoneKey(shopWeekOffset);
-  if (state.checked[k]) delete state.checked[k];
-  else state.checked[k] = true;
-  save();
-  render();
-}
 
 function changeShopWeek(dir) { shopWeekOffset += dir; render(); }
 
@@ -1355,9 +1381,69 @@ function render() {
   const browseEl = document.getElementById('browse-view');
   const listEl = document.getElementById('list-view');
 
-  document.getElementById('browse-count').textContent = getAllRecipes().length || '';
-  const calWeekMealCount = getMealOccurrences(calWeekOffset).length;
-  document.getElementById('meals-count').textContent = calWeekMealCount || '';
+  const browseCount = document.getElementById('browse-count');
+  if (browseCount) browseCount.textContent = getAllRecipes().length || '';
+
+  // Home — "This week": tonight's dinner, the week at a glance, quiet links.
+  const homeEl = document.getElementById('home-view');
+  if (homeEl) {
+    const homeDates = getWeekDates(0);
+    const todayK = dateKey(new Date());
+    const weekHasPlan = getMealOccurrences(0).length > 0;
+    let hh = '';
+    if (!weekHasPlan) {
+      hh += '<div class="empty"><div class="icon">&#127859;</div><p>Nothing planned this week.<br>Pick recipes, assign days, copy your list.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
+    } else {
+      const todayMeals = (state.calendar[todayK]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
+      if (todayMeals.length > 0) {
+        const hero = todayMeals[0];
+        hh += '<div class="home-hero">';
+        hh += '<div class="home-hero-label">Tonight &middot; ' + dayName(new Date()) + '</div>';
+        todayMeals.forEach(r => {
+          hh += '<div class="home-hero-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</div>';
+        });
+        hh += '<div class="home-hero-meta">serves ' + esc(hero.servings) + (hero.site ? ' &middot; ' + esc(hero.site) : '') + '</div>';
+        hh += '<button class="btn btn-add btn-sm" style="margin-top:12px" onclick="openRecipeDetail(\'' + hero.id + '\')">View recipe</button>';
+        hh += '</div>';
+      } else {
+        let next = null;
+        for (const d of homeDates) {
+          if (isPast(d) || isToday(d)) continue;
+          const ms = (state.calendar[dateKey(d)]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
+          if (ms.length) { next = { d, r: ms[0] }; break; }
+        }
+        hh += '<div class="home-hero" style="border-left-color:var(--border)">';
+        hh += '<div class="home-hero-label" style="color:var(--muted)">Tonight &middot; ' + dayName(new Date()) + '</div>';
+        hh += '<div class="home-hero-name" style="color:var(--muted);cursor:default">Nothing planned tonight</div>';
+        if (next) hh += '<div class="home-hero-meta">Next up: ' + dayName(next.d) + ' &middot; ' + esc(next.r.name) + '</div>';
+        hh += '</div>';
+      }
+      hh += '<div class="home-week">';
+      homeDates.forEach(d => {
+        const dk = dateKey(d);
+        const today = isToday(d);
+        const past = isPast(d);
+        const meals = (state.calendar[dk]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
+        hh += '<div class="home-week-row' + (today ? ' today' : '') + (past ? ' past' : '') + '">';
+        hh += '<span class="hw-day">' + dayName(d).slice(0,3) + '</span>';
+        if (meals.length) {
+          hh += '<span class="hw-meals">' + meals.map(r => '<span class="hw-meal" onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</span>').join(' &middot; ') + '</span>';
+        } else if (!past) {
+          hh += '<span class="hw-meals hw-add" onclick="openMealPicker(\'' + dk + '\')">+ add</span>';
+        } else {
+          hh += '<span class="hw-meals" style="color:var(--muted)">&mdash;</span>';
+        }
+        hh += '<span class="hw-date">' + fmtDate(d) + '</span>';
+        hh += '</div>';
+      });
+      hh += '</div>';
+      hh += '<div class="home-links">';
+      hh += '<a href="#" onclick="calWeekOffset=0;showView(\'calendar\');return false">Edit week</a>';
+      hh += '<a href="#" onclick="shopWeekOffset=0;showView(\'list\');return false">Shopping list</a>';
+      hh += '</div>';
+    }
+    homeEl.innerHTML = hh;
+  }
 
   // Browse/Recipes view with favorites on top, search + hidden filter
   const allR = getAllRecipes();
@@ -1369,7 +1455,8 @@ function render() {
   const favVisible = visible.filter(r => state.favorites.includes(r.id));
   const nonFavVisible = visible.filter(r => !state.favorites.includes(r.id));
 
-  let browseHTML = '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
+  let browseHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button></div>';
+  browseHTML += '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
   browseHTML += '<input class="search-input" type="text" placeholder="Search recipes..." value="' + browseSearch.replace(/"/g,'&quot;') + '" oninput="browseSearch=this.value;render()" id="browse-search">';
   if (browseSearch) browseHTML += '<button class="search-clear" onclick="browseSearch=\'\';render()">&times;</button>';
   browseHTML += '</div>';
@@ -1400,51 +1487,11 @@ function render() {
   const si = document.getElementById('browse-search');
   if (si && document.activeElement !== si && q) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
 
-  // Inbox view
-  const inboxEl = document.getElementById('inbox-view');
-  if (inboxEl) {
-    const inboxItems = getInboxMeals();
-    let inboxHTML = '<div style="background:linear-gradient(135deg,var(--yolk),var(--tomato));border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden"><div style="position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:var(--yolk);opacity:0.5"></div><div style="position:absolute;right:10px;top:10px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15)"></div><div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);margin-bottom:6px">Weekly picks</div><h2 style="font-family:var(--font-display);font-size:22px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:6px">' + inboxItems.length + ' fresh dinners<br>this week</h2><p style="font-size:13px;color:rgba(255,255,255,0.85)">Tap + to add to your collection &rarr;</p></div>';
-    const sites = ['All','Simple Home Edit','Budget Bytes','Half Baked Harvest'];
-    inboxHTML += '<div class="inbox-filters">';
-    sites.forEach(s => {
-      const isActive = (s === 'All' && !inboxCategory) || inboxCategory === s;
-      inboxHTML += '<button class="inbox-filter' + (isActive ? ' active' : '') + '" onclick="filterInbox(\'' + (s === 'All' ? '' : s.replace(/'/g,"\\'")) + '\')">' + s + '</button>';
-    });
-    inboxHTML += '</div>';
-    const inboxMeals = inboxItems;
-    if (inboxMeals.length === 0) {
-      inboxHTML += '<div class="empty"><div class="icon">&#127881;</div><p>You\'ve seen all the recipes!<br>Clear dismissed to see them again.</p><button class="empty-cta" onclick="inboxDismissed=[];localStorage.setItem(\'inboxDismissed\',\'[]\');render()">Reset</button></div>';
-    } else {
-      inboxHTML += '<div class="inbox-grid">';
-      inboxMeals.forEach(function(recipe) {
-        var added = state.customRecipes.some(function(r) { return !r.deleted && r.name.toLowerCase() === recipe.name.toLowerCase(); });
-        var tagColorMap = {'one-pan':'var(--tomato)','one-pot':'var(--basil)','dairy-free':'var(--basil)','gluten-free':'var(--gold)','fakeaway':'var(--yolk)','vegetarian':'var(--basil)'};
-        var tagBgMap = {'one-pan':'var(--accent-light)','one-pot':'var(--green-light)','dairy-free':'var(--green-light)','gluten-free':'var(--yolk-light)','fakeaway':'var(--yolk-light)','vegetarian':'var(--green-light)'};
-        inboxHTML += '<div class="inbox-card"><div class="inbox-card-body">';
-        inboxHTML += '<div class="inbox-card-name" style="font-family:var(--font-display);font-size:15px;font-weight:700"><a href="' + recipe.url + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">' + recipe.name + '</a></div>';
-        inboxHTML += '<div class="inbox-card-meta" style="font-family:var(--font-mono);font-size:11px"><a href="' + recipe.url + '" target="_blank" rel="noopener" style="color:var(--tomato);text-decoration:none">' + recipe.site + ' &#8599;</a></div>';
-        if (recipe.tags && recipe.tags.length) inboxHTML += '<div style="font-size:11px;margin-bottom:6px">' + recipe.tags.map(function(t){var c=tagColorMap[t]||'var(--muted)';var bg=tagBgMap[t]||'var(--bg)';return '<span style="display:inline-block;background:'+bg+';color:'+c+';border-radius:6px;padding:2px 8px;margin:0 4px 2px 0;font-weight:500">' + t + '</span>';}).join('') + '</div>';
-        if (recipe.servings) inboxHTML += '<div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:8px">serves ' + recipe.servings + '</div>';
-        inboxHTML += '<div class="inbox-card-actions">';
-        if (added) {
-          inboxHTML += '<button class="inbox-card-add" disabled>Added &#10003;</button>';
-        } else {
-          inboxHTML += '<button class="inbox-card-add" onclick="addFromInbox(\'' + recipe.id + '\')">+ Add</button>';
-        }
-        inboxHTML += '<button class="inbox-card-skip" onclick="skipInboxMeal(\'' + recipe.id + '\')">Skip</button>';
-        inboxHTML += '</div></div></div>';
-      });
-      inboxHTML += '</div>';
-    }
-    inboxEl.innerHTML = inboxHTML;
-    document.getElementById('inbox-count').textContent = inboxMeals.length || '';
-  }
-
   // Calendar view
   const calEl = document.getElementById('calendar-view');
   const weekDates = getWeekDates(calWeekOffset);
-  let calHTML = '<div class="cal-header">';
+  let calHTML = '<a href="#" class="view-back" onclick="showView(\'home\');return false">&larr; This week</a>';
+  calHTML += '<div class="cal-header">';
   calHTML += '<button class="cal-nav-btn" onclick="changeWeek(-1)">&larr; Prev</button>';
   calHTML += '<h2>' + fmtDate(weekDates[0]) + ' — ' + fmtDate(weekDates[6]) + '</h2>';
   calHTML += '<button class="cal-nav-btn" onclick="changeWeek(1)">Next &rarr;</button>';
@@ -1522,66 +1569,34 @@ function render() {
   const shopWeekLabel = fmtDate(shopDates[0]) + ' — ' + fmtDate(shopDates[6]);
   const shopIsThisWeek = shopWeekOffset === 0;
 
-  let shopHeader = '<div class="cal-header">';
+  let shopHeader = '<a href="#" class="view-back" onclick="showView(\'home\');return false">&larr; This week</a>';
+  shopHeader += '<div class="cal-header">';
   shopHeader += '<button class="cal-nav-btn" onclick="changeShopWeek(-1)">&larr;</button>';
   shopHeader += '<h2>' + shopWeekLabel + (shopIsThisWeek ? ' · This week' : '') + '</h2>';
   shopHeader += '<button class="cal-nav-btn" onclick="changeShopWeek(1)">&rarr;</button>';
   shopHeader += '</div>';
 
   if (shopMealIds.length === 0) {
-    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Assign meals to days first, then your list appears here.</p><button class="empty-cta" onclick="showView(\'calendar\')">Go to Calendar</button></div>';
-    document.getElementById('list-count').textContent = '0';
+    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Plan the week first, then your list appears here.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
   } else {
+    // "Checked" means: I already have this at home — leave it off the order.
     let totalItems = 0;
-    let checkedItems = 0;
+    let haveItems = 0;
     shopList.forEach(g => g.items.forEach(item => {
       totalItems++;
-      if (item.keys.every(k => state.checked[k])) checkedItems++;
+      if (item.keys.every(k => state.checked[k])) haveItems++;
     }));
-    const remaining = totalItems - checkedItems;
-    const shopDone = isShopDone(shopWeekOffset);
-    document.getElementById('list-count').textContent = shopDone ? '✓' : (remaining > 0 ? remaining : (checkedItems > 0 ? '✓' : ''));
+    const toOrder = totalItems - haveItems;
 
-    const pct = totalItems ? Math.round((checkedItems / totalItems) * 100) : 0;
-    const circ = 2 * Math.PI * 34;
-    const offset = circ - (circ * pct / 100);
-    // Find a contextual hint
-    let hint = '';
-    if (pct === 100) { hint = 'All checked — mark it done below'; }
-    else if (pct === 0) { hint = 'Start checking items off'; }
-    else {
-      const doneCategories = [];
-      shopList.forEach(g => {
-        const allDone = g.items.every(item => item.keys.every(k => state.checked[k]));
-        if (allDone) doneCategories.push(g.cat);
-      });
-      if (doneCategories.length > 0) hint = doneCategories[doneCategories.length-1] + ' section done';
-      else hint = 'Keep going!';
-    }
     let html = shopHeader;
-    if (shopDone) {
-      // Completed state: a clear banner instead of the progress ring.
-      html += '<div class="shop-done-banner" style="display:flex;align-items:center;gap:12px;background:var(--green);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:16px">';
-      html += '<div style="font-size:30px;line-height:1">&#9989;</div>';
-      html += '<div style="flex:1"><div style="font-family:var(--font-display);font-size:18px;font-weight:800">Shopping complete</div>';
-      html += '<div style="font-size:13px;opacity:0.9">' + esc(shopWeekLabel) + ' &middot; ' + totalItems + ' item' + (totalItems!==1?'s':'') + '</div></div>';
-      html += '<button class="btn-outline" style="background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.45)" onclick="toggleShopDone()">Reopen</button>';
-      html += '</div>';
-    } else {
-      html += '<div class="progress-ring-wrap">';
-      html += '<svg width="72" height="72" viewBox="0 0 80 80">';
-      html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="6"/>';
-      html += '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--green)" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+offset.toFixed(1)+'" transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 0.4s"/>';
-      html += '<text x="40" y="37" text-anchor="middle" font-size="18" font-weight="600" fill="var(--text)">' + pct + '%</text>';
-      html += '<text x="40" y="52" text-anchor="middle" font-size="9" fill="var(--muted)">' + checkedItems + '/' + totalItems + '</text>';
-      html += '</svg>';
-      html += '<div class="progress-ring-info"><div class="pr-count">' + checkedItems + ' of ' + totalItems + ' items</div>';
-      html += '<div class="pr-hint">' + hint + '</div></div></div>';
-    }
-    html += '<div class="list-actions"><button class="btn-outline" id="copy-list-btn" onclick="copyShoppingList()">&#128203; Copy list</button><button class="btn-outline" onclick="uncheckAll()">Uncheck all</button></div>';
-    if (!shopDone) {
-      html += '<button class="btn btn-add" style="width:100%;margin:0 0 16px;padding:13px;background:var(--green);border-color:var(--green)" onclick="toggleShopDone()">&#10003; Mark shopping done</button>';
-    }
+    html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)">';
+    html += '<div style="font-family:var(--font-display);font-size:17px;font-weight:800">' + toOrder + ' item' + (toOrder!==1?'s':'') + ' to order</div>';
+    html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Tick anything you already have &mdash; Copy sends the rest' + (haveItems > 0 ? ' &middot; ' + haveItems + ' marked have' : '') + '</div>';
+    html += '</div>';
+    html += '<div class="list-actions">';
+    html += '<button class="btn btn-add" id="copy-list-btn" style="flex:1;padding:12px" onclick="copyShoppingList()">&#128203; Copy ' + toOrder + ' item' + (toOrder!==1?'s':'') + '</button>';
+    if (haveItems > 0) html += '<button class="btn-outline" onclick="uncheckAll()">Clear haves</button>';
+    html += '</div>';
 
     if (noIngRecipes.length > 0) {
       html += '<div class="shop-warning" style="background:var(--yolk-light);border:1px solid var(--yolk);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--text)">';
@@ -1590,15 +1605,14 @@ function render() {
       html += '</div>';
     }
 
-    if (shopDone) html += '<div style="opacity:0.5">';
     shopList.forEach(group => {
       html += '<div class="section-label">' + esc(group.cat) + '</div>';
       group.items.forEach(item => {
-        const isChecked = item.keys.every(k => state.checked[k]);
-        html += '<div class="shop-item' + (isChecked ? ' checked' : '') + '">';
-        html += '<input type="checkbox" ' + (isChecked ? 'checked ' : '') + 'data-keys="' + esc(JSON.stringify([...new Set(item.keys)])) + '" onchange="toggleCheckFromEl(this)">';
+        const isHave = item.keys.every(k => state.checked[k]);
+        html += '<div class="shop-item' + (isHave ? ' checked' : '') + '">';
+        html += '<input type="checkbox" ' + (isHave ? 'checked ' : '') + 'data-keys="' + esc(JSON.stringify([...new Set(item.keys)])) + '" onchange="toggleCheckFromEl(this)" title="Tick = already have it">';
         html += '<div class="item-details">';
-        html += '<div class="item-name">' + esc(item.name) + '</div>';
+        html += '<div class="item-name">' + esc(item.name) + (isHave ? ' <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">have</span>' : '') + '</div>';
         html += '<div class="item-qty">' + esc(item.qty) + '</div>';
         html += '<div class="item-meals">';
         const uniqueMeals = [...new Set(item.meals)];
@@ -1608,7 +1622,6 @@ function render() {
         html += '</div></div></div>';
       });
     });
-    if (shopDone) html += '</div>';
     listEl.innerHTML = html;
   }
 
@@ -1745,45 +1758,80 @@ function selectWeekAndPlan(offset) {
 }
 
 // Planning wizard
+let wizardStep = 1;
+let wizardSearch = '';
+
 function renderWizard() {
+  wizardStep = 1;
   const old = document.getElementById('planning-wizard');
   if (old) old.remove();
   const dates = getWeekDates(wizardWeekOffset);
   const weekLabel = fmtDate(dates[0]) + ' — ' + fmtDate(dates[6]);
 
+  // Most recent past cook date per recipe → "last cooked 2w ago" hints.
+  const lastCooked = {};
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  Object.keys(state.calendar).forEach(dk => {
+    const d = new Date(dk + 'T12:00:00');
+    if (d >= today0) return;
+    (state.calendar[dk]||[]).forEach(id => {
+      if (!lastCooked[id] || d > lastCooked[id]) lastCooked[id] = d;
+    });
+  });
+  const weeksAgo = d => Math.max(1, Math.round((today0 - d) / (7 * 24 * 3600 * 1000)));
+
   let h = '<div class="wizard-overlay" id="planning-wizard">';
   h += '<div class="wizard-header"><h2>Plan: ' + weekLabel + '</h2>';
   h += '<button class="wizard-close" onclick="closeWizard()">&times;</button></div>';
   h += '<div class="wizard-body">';
-  h += '<div class="wizard-step">Step 1 of 2 &middot; Choose Recipes</div>';
-  h += '<p class="wizard-hint">Tap recipes to add them to your plan. You\'ll assign them to specific days next.</p>';
+  h += '<div class="wizard-step">Step 1 of 3 &middot; Gather</div>';
+  h += '<p class="wizard-hint">Pull from your library, or go find something new on your sites.</p>';
 
-  // Show favorites first if any
+  // The basket — what's picked for this week so far
+  if (wizardPicked.length > 0) {
+    h += '<div style="background:var(--accent-light);border-radius:12px;padding:10px 12px;margin-bottom:12px">';
+    h += '<div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent-text);margin-bottom:6px">In the basket &middot; ' + wizardPicked.length + '</div>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    wizardPicked.forEach(id => {
+      const r = getAllRecipes().find(x => x.id === id);
+      if (!r) return;
+      h += '<span style="font-size:12px;padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer" onclick="toggleWizardPick(\'' + id + '\')" title="Remove from basket">' + esc(r.name) + ' &times;</span>';
+    });
+    h += '</div></div>';
+  }
+
+  // Library — favorites first, searchable, one tap to pick
+  h += '<div class="section-label" style="padding-top:4px">From your library</div>';
+  h += '<div class="search-wrap" style="margin:6px 0 8px"><span class="search-icon">&#128269;</span><input class="search-input" type="text" placeholder="Search your recipes..." value="' + esc(wizardSearch) + '" oninput="filterWizardList(this.value)"></div>';
+
   const favRecipes = getAllRecipes().filter(r => state.favorites.includes(r.id));
   const otherRecipes = getAllRecipes().filter(r => !state.favorites.includes(r.id));
   const ordered = [...favRecipes, ...otherRecipes];
 
-  if (favRecipes.length > 0) {
-    h += '<div class="section-label" style="padding-top:8px">&#9733; Favorites</div>';
-  }
-
-  ordered.forEach((r, idx) => {
-    if (favRecipes.length > 0 && idx === favRecipes.length) {
-      h += '<div class="section-label" style="padding-top:8px">All Recipes</div>';
-    }
+  ordered.forEach(r => {
     const isPicked = wizardPicked.includes(r.id);
-    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
-    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + esc(r.name) + '</div>';
-    h += '<div class="wizard-recipe-meta">';
-    r.tags.forEach(t => { h += t + ' · '; });
-    h += 'serves ' + r.servings + '</div></div>';
+    const isFav = state.favorites.includes(r.id);
+    const lc = lastCooked[r.id];
+    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" data-name="' + esc(r.name.toLowerCase()) + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
+    h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + (isFav ? '&#9733; ' : '') + esc(r.name) + '</div>';
+    h += '<div class="wizard-recipe-meta">' + (lc ? 'last cooked ' + weeksAgo(lc) + 'w ago &middot; ' : '') + 'serves ' + esc(r.servings) + '</div></div>';
     h += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
     h += '</div>';
   });
 
+  // Discovery — your source sites (with your notes) + the URL importer
+  h += '<div class="section-label" style="padding-top:16px">Or find something new</div>';
+  recipeSources.filter(s => s.active !== false).forEach(s => {
+    h += '<a href="' + esc(s.url) + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;text-decoration:none;color:var(--text);background:var(--card)">';
+    h += '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">' + esc(s.name) + '</div>';
+    if (s.notes) h += '<div style="font-size:12px;color:var(--muted)">' + esc(s.notes) + '</div>';
+    h += '</div><span style="color:var(--tomato);font-size:16px">&#8599;</span></a>';
+  });
+  h += '<button class="btn-outline" style="width:100%" onclick="openImportModal()">&#128279; Found one? Paste the recipe URL&hellip;</button>';
+
   h += '</div>';
   h += '<div class="wizard-footer">';
-  h += '<div class="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' selected</div>';
+  h += '<div class="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' in the basket</div>';
   if (wizardPicked.length > 0) {
     h += '<button class="btn btn-add" onclick="wizardContinue()">Next: Assign days &#8250;</button>';
   } else {
@@ -1792,6 +1840,16 @@ function renderWizard() {
   h += '</div></div>';
 
   document.body.insertAdjacentHTML('beforeend', h);
+  if (wizardSearch) filterWizardList(wizardSearch);
+}
+
+// Hide non-matching library rows in place (no re-render, keeps typing focus).
+function filterWizardList(q) {
+  wizardSearch = q || '';
+  const needle = wizardSearch.toLowerCase();
+  document.querySelectorAll('#planning-wizard .wizard-recipe').forEach(el => {
+    el.style.display = (el.dataset.name || '').includes(needle) ? '' : 'none';
+  });
 }
 
 function toggleWizardPick(id) {
@@ -1821,6 +1879,7 @@ function wizardContinue() {
 }
 
 function renderWizardStep2() {
+  wizardStep = 2;
   const old = document.getElementById('planning-wizard');
   if (old) old.remove();
   const dates = getWeekDates(wizardWeekOffset);
@@ -1835,7 +1894,7 @@ function renderWizardStep2() {
   h += '<div class="wizard-header"><h2>Plan: ' + weekLabel + '</h2>';
   h += '<button class="wizard-close" onclick="closeWizard()">&times;</button></div>';
   h += '<div class="wizard-body">';
-  h += '<div class="wizard-step">Step 2 of 2 &middot; Assign to Days</div>';
+  h += '<div class="wizard-step">Step 2 of 3 &middot; Assign to days</div>';
   h += '<p class="wizard-hint">Tap an unassigned meal, then tap a day to place it. Or tap + on any day.</p>';
 
   // Unassigned chips
@@ -1871,7 +1930,7 @@ function renderWizardStep2() {
   h += '<button class="btn btn-remove" onclick="wizardBackToStep1()">&#8249; Back</button>';
   const totalAssigned = Object.values(wizardAssignments).reduce((s, a) => s + a.length, 0);
   h += '<div class="wizard-count">' + totalAssigned + ' meal' + (totalAssigned !== 1 ? 's' : '') + ' assigned</div>';
-  h += '<button class="btn btn-add" onclick="wizardFinish()">Done &#10003;</button>';
+  h += '<button class="btn btn-add" onclick="wizardFinish()">Next: Review list &#8250;</button>';
   h += '</div></div>';
 
   document.body.insertAdjacentHTML('beforeend', h);
@@ -1963,8 +2022,11 @@ function wizardFinish() {
   });
   save();
   closeWizard();
+  // Step 3 of the ritual: review the generated list, tick what you have, copy.
   calWeekOffset = wizardWeekOffset;
-  showView('calendar');
+  shopWeekOffset = wizardWeekOffset;
+  showView('list');
+  showToast('Step 3: tick what you already have, then copy the list');
 }
 
 /* ── Recipe import from URL ── */
@@ -2189,6 +2251,14 @@ function confirmImport(recipe) {
   state.customRecipes.push(recipe);
   save();
   closeImportModal();
+  // Mid-ritual import: drop it straight into the basket.
+  if (document.getElementById('planning-wizard') && wizardStep === 1) {
+    if (!wizardPicked.includes(recipe.id)) wizardPicked.push(recipe.id);
+    renderWizard();
+    showToast(recipe.name + ' added to the basket');
+  } else {
+    showToast(recipe.name + ' added to your library');
+  }
   render();
 }
 
@@ -2276,174 +2346,29 @@ function copyShoppingList() {
     });
   });
   const text = lines.join('\n');
-  navigator.clipboard.writeText(text).then(() => {
+  // Copy is the terminal act of the weekly ritual — confirm loudly, point at the destination.
+  const copied = function() {
+    const n = lines.length;
     const btn = document.getElementById('copy-list-btn');
-    if (!btn) return;
-    const orig = btn.innerHTML;
-    btn.innerHTML = '&#10003; Copied!';
-    setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 1500);
-  }).catch(() => {
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '&#10003; Copied!';
+      setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 1500);
+    }
+    showToast(n + ' item' + (n!==1?'s':'') + ' copied — paste into DoorDash or Instacart');
+  };
+  navigator.clipboard.writeText(text).then(copied).catch(() => {
     // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
     document.body.removeChild(ta);
-    const btn = document.getElementById('copy-list-btn');
-    if (!btn) return;
-    const orig = btn.innerHTML;
-    btn.innerHTML = '&#10003; Copied!';
-    setTimeout(() => { const b = document.getElementById('copy-list-btn'); if (b) b.innerHTML = orig; }, 1500);
+    copied();
   });
-}
-
-/* ── Inbox: curated recipes from our favorite sites ── */
-const INBOX_RECIPES = [
-  {id:'inbox_she_1',name:'Butter Chicken Meatballs',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/butter-chicken-meatballs/',desc:'Tender chicken meatballs simmered in a creamy butter chicken sauce. No frying — they cook right in the sauce.',tags:['one-pan'],servings:4},
-  {id:'inbox_she_2',name:'Italian-style Meatballs',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/italian-style-meatballs/',desc:'Classic Italian meatballs in a rich tomato sauce. Great with pasta or crusty bread.',tags:[],servings:4},
-  {id:'inbox_she_3',name:'Crispy Fried Chicken Burgers',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/crispy-fried-chicken-burgers/',desc:'Crispy fried chicken on toasted brioche with ranch slaw, cheese, and pickles.',tags:['fakeaway'],servings:4},
-  {id:'inbox_she_4',name:'Everyday Garlic Lemon Chicken Thighs',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/everyday-garlic-lemon-chicken-thighs/',desc:'Golden charred garlic lemon chicken thighs with crispy roasted potatoes. Gluten-free and dairy-free.',tags:['gluten-free','dairy-free'],servings:4},
-  {id:'inbox_she_5',name:'One-Pan Korean-style Beef Noodles',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/one-pan-korean-style-beef-noodles/',desc:'Korean-style beef noodles topped with sesame seeds, cucumber and spring onion. All in one pan.',tags:['one-pan','dairy-free'],servings:4},
-  {id:'inbox_she_6',name:'Chicken Cacciatore',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/chicken-cacciatore/',desc:'Rich tomato sauce with tender chicken and creamy parmesan polenta. Gluten-free comfort food.',tags:['gluten-free'],servings:4},
-  {id:'inbox_she_7',name:'Bruschetta Salad',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/bruschetta-salad/',desc:'Fresh bruschetta salad with crispy garlic parmesan croutons. Light and full of flavor.',tags:['vegetarian'],servings:4},
-  {id:'inbox_she_8',name:'Mediterranean Village Salad',site:'Simple Home Edit',url:'https://simplehomeedit.com/recipe/mediterranean-village-salad/',desc:'A vibrant village salad with feta, olives, and fresh dill. Simple and refreshing.',tags:['vegetarian','gluten-free'],servings:4},
-  {id:'inbox_bb_1',name:'One Pot Chicken and Rice',site:'Budget Bytes',url:'https://www.budgetbytes.com/one-pot-chicken-and-rice/',desc:'Everything cooks together in one pot for maximum flavor and minimum cleanup. $1.54/serving.',tags:['one-pot'],servings:4},
-  {id:'inbox_bb_2',name:'One Pot Creamy Cajun Chicken Pasta',site:'Budget Bytes',url:'https://www.budgetbytes.com/one-pot-creamy-cajun-chicken-pasta/',desc:'Creamy, spicy Cajun chicken pasta made entirely in one pot. $2.35/serving.',tags:['one-pot'],servings:4},
-  {id:'inbox_bb_3',name:'Beef Stroganoff',site:'Budget Bytes',url:'https://www.budgetbytes.com/beef-stroganoff/',desc:'Classic beef stroganoff with tender beef and a rich, creamy mushroom sauce. $1.39/serving.',tags:[],servings:4},
-  {id:'inbox_bb_4',name:'Skillet Lasagna',site:'Budget Bytes',url:'https://www.budgetbytes.com/skillet-lasagna/',desc:'All the comfort of lasagna made in one skillet on the stovetop. $2.25/serving.',tags:['one-pan'],servings:4},
-  {id:'inbox_bb_5',name:'One Pot Cheeseburger Pasta',site:'Budget Bytes',url:'https://www.budgetbytes.com/skillet-cheeseburger-pasta/',desc:'All the flavors of a cheeseburger in pasta form, made in one pot. $1.26/serving.',tags:['one-pot'],servings:4},
-  {id:'inbox_bb_6',name:'Chicken Fried Rice',site:'Budget Bytes',url:'https://www.budgetbytes.com/chicken-fried-rice/',desc:'Better than takeout chicken fried rice. Quick, easy, and just $1.19/serving.',tags:['dairy-free'],servings:4},
-  {id:'inbox_bb_7',name:'Marry Me Chicken Pasta',site:'Budget Bytes',url:'https://www.budgetbytes.com/marry-me-chicken-pasta/',desc:'Creamy one-pot dinner with chicken, penne, sundried tomatoes, spinach, and Parmesan cream sauce. $1.41/serving.',tags:['one-pot'],servings:6},
-  {id:'inbox_bb_8',name:'Egg Roll In A Bowl',site:'Budget Bytes',url:'https://www.budgetbytes.com/egg-roll-in-a-bowl/',desc:'Deconstructed egg roll with all the classic flavors — no wrapper or deep-frying needed. $2.58/serving.',tags:['dairy-free'],servings:4},
-  {id:'inbox_bb_9',name:'Stuffed Pepper Skillet',site:'Budget Bytes',url:'https://www.budgetbytes.com/stuffed-pepper-skillet/',desc:'Easy one-pan dinner with savory sausage, sweet bell peppers, tender rice, and tomatoey sauce. $2.03/serving.',tags:['one-pan'],servings:6},
-  {id:'inbox_bb_10',name:'Chicken Piccata Meatballs and Orzo',site:'Budget Bytes',url:'https://www.budgetbytes.com/chicken-piccata-meatballs-and-orzo-skillet/',desc:'Juicy chicken meatballs with tender orzo, lemon, capers, Parmesan, and garlic in one pan. $1.97/serving.',tags:['one-pan'],servings:4},
-  {id:'inbox_hbh_1',name:'Creamy Sun-Dried Tomato Chicken Pasta',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/creamy-sun-dried-tomato-chicken-pasta/',desc:'An all-in-one meal for busy weeknights — quick, easy, hearty, and so delicious.',tags:['one-pot'],servings:4},
-  {id:'inbox_hbh_2',name:'One Skillet Lemon Butter Chicken and Orzo',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/one-skillet-lemon-butter-chicken-and-orzo/',desc:'Super easy — one skillet, under an hour, using mostly pantry staple ingredients.',tags:['one-pan'],servings:4},
-  {id:'inbox_hbh_3',name:'Sheet Pan Chicken Fajitas',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/sheet-pan-chicken-fajitas/',desc:'Easy sheet pan chicken fajitas with roasted peppers, creamy verde sauce, and charred tortillas.',tags:['gluten-free'],servings:4},
-  {id:'inbox_hbh_4',name:'30 Minute Thai Peanut Chicken Ramen',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/20-minute-thai-peanut-chicken-ramen/',desc:'All in one pot — creamy, spicy, filled with veggies, lean chicken, and ramen noodles.',tags:['one-pot','dairy-free'],servings:4},
-  {id:'inbox_hbh_5',name:'Skillet Mexican Beef and Rice',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/skillet-mexican-beef-and-rice/',desc:'Quick one-pan dinner with seasoned beef, rice, veggies, and cheese.',tags:['one-pan'],servings:4},
-  {id:'inbox_hbh_6',name:'Sheet Pan Ginger Sesame Beef and Broccoli',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/sheet-pan-spicy-ginger-sesame-beef/',desc:'Add rice and spicy sauce — the easiest sheet pan dinner. Spicy, sweet, and savory.',tags:['dairy-free'],servings:4},
-  {id:'inbox_hbh_7',name:'Greek Meatballs and Lemon Butter Orzo',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/one-skillet-greek-meatballs-and-lemon-butter-orzo/',desc:'Pan-seared Greek chicken meatballs with lemon butter orzo in one skillet. Served with whipped feta.',tags:['one-pan'],servings:4},
-  {id:'inbox_hbh_8',name:'Creamy White Chicken Chili',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/creamy-white-chicken-chili/',desc:'Spicy, creamy, and so delicious. Perfect with a side of beer bread on a cold night.',tags:['gluten-free'],servings:6},
-  {id:'inbox_hbh_9',name:'Garlic Butter Creamed Corn Chicken',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/creamed-corn-chicken/',desc:'Creamy, garlicky, packed with corn, finished with fresh herbs and parmesan. One skillet, under an hour.',tags:['one-pan'],servings:4},
-  {id:'inbox_hbh_10',name:'French Onion Smothered Chicken',site:'Half Baked Harvest',url:'https://www.halfbakedharvest.com/french-onion-smothered-chicken/',desc:'When you crave French onion soup but need something quick — all in one skillet.',tags:['one-pan'],servings:4}
-];
-
-let inboxCategory = '';
-let inboxDismissed = JSON.parse(localStorage.getItem('inboxDismissed') || '[]');
-
-// The inbox draws from inboxPool. It starts as the hardcoded INBOX_RECIPES and is
-// replaced/augmented by inbox.json (refreshed weekly by the scrape-inbox GitHub
-// Action) once that loads. Falls back to the hardcoded list if the fetch fails.
-let inboxPool = INBOX_RECIPES.slice();
-
-async function loadInboxFeed() {
-  try {
-    const res = await fetch('inbox.json?t=' + Date.now()); // cache-bust the weekly file
-    if (!res.ok) return;
-    const data = await res.json();
-    const scraped = Array.isArray(data) ? data : (data.recipes || []);
-    if (!Array.isArray(scraped) || scraped.length === 0) return;
-    // Fresh scraped recipes first, then hardcoded ones, deduped by name.
-    const seen = new Set(), merged = [];
-    [...scraped, ...INBOX_RECIPES].forEach(r => {
-      const k = (r && r.name || '').toLowerCase().trim();
-      if (!k || seen.has(k)) return;
-      seen.add(k);
-      merged.push(r);
-    });
-    inboxPool = merged;
-    render();
-  } catch(e) {
-    console.log('inbox.json unavailable, using built-in list:', e.message);
-  }
-}
-
-function getWeekNumber() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 1);
-  return Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000));
-}
-
-function getInboxMeals() {
-  const existingNames = new Set(state.customRecipes.filter(r => !r.deleted).map(r => r.name.toLowerCase()));
-  const dismissedSet = new Set(inboxDismissed);
-  let pool = inboxPool.filter(r => !existingNames.has(r.name.toLowerCase()) && !dismissedSet.has(r.id));
-  if (inboxCategory) pool = pool.filter(r => r.site === inboxCategory);
-  // Pick 5 per week with a genuinely week-dependent deterministic ordering.
-  const week = getWeekNumber();
-  const shuffled = pool.slice().sort(function(a, b) {
-    return hashStr(a.id + '|' + week) - hashStr(b.id + '|' + week);
-  });
-  return shuffled.slice(0, 5);
-}
-
-function filterInbox(category) { inboxCategory = category || ''; render(); }
-
-async function addFromInbox(id) {
-  const recipe = inboxPool.find(r => r.id === id) || INBOX_RECIPES.find(r => r.id === id);
-  if (!recipe) return;
-  if (state.customRecipes.some(r => !r.deleted && r.name.toLowerCase() === recipe.name.toLowerCase())) {
-    showToast('Already in collection');
-    return;
-  }
-  // Scraped recipes (from inbox.json) already carry ingredients — use them directly.
-  const feedIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-  const feedCount = feedIngredients.reduce((s,g) => s + (g.items ? g.items.length : 0), 0);
-
-  // Add immediately (optimistic), reviving a tombstone if this was deleted before.
-  let rec = state.customRecipes.find(r => r.id === recipe.id);
-  if (rec) {
-    rec.deleted = false;
-    rec.ingredients = feedCount > 0 ? feedIngredients : [];
-  } else {
-    rec = {
-      id: recipe.id, name: recipe.name, site: recipe.site, url: recipe.url,
-      desc: recipe.desc, tags: recipe.tags || [], servings: recipe.servings || 4,
-      ingredients: feedCount > 0 ? feedIngredients : [], custom: true, linkOnly: feedCount === 0
-    };
-    state.customRecipes.push(rec);
-  }
-  if (feedCount > 0) {
-    rec.linkOnly = false;
-    save(); render();
-    showToast(recipe.name + ' added ✓');
-    return;
-  }
-  rec.linkOnly = true;
-  save(); render();
-  showToast(recipe.name + ' added — fetching ingredients…');
-
-  // No ingredients in the feed — try to enrich from the source page (older entries).
-  try {
-    const html = await fetchHtmlViaProxies(recipe.url);
-    const parsed = html ? parseRecipeFromHtml(html, recipe.url) : null;
-    const count = parsed && parsed.ingredients ? parsed.ingredients.reduce((s,g) => s + g.items.length, 0) : 0;
-    const target = state.customRecipes.find(r => r.id === recipe.id);
-    if (target && !target.deleted && count > 0) {
-      target.ingredients = parsed.ingredients;
-      target.linkOnly = false;
-      if (parsed.servings) target.servings = parsed.servings;
-      if (!target.desc && parsed.desc) target.desc = parsed.desc;
-      save(); render();
-      showToast(recipe.name + ' — ingredients added ✓');
-    } else {
-      showToast(recipe.name + ' added — tap “Edit ingredients” to add them');
-    }
-  } catch(e) {
-    showToast(recipe.name + ' added — couldn’t fetch ingredients');
-  }
-}
-
-function skipInboxMeal(id) {
-  inboxDismissed.push(id);
-  if (inboxDismissed.length > 500) inboxDismissed = inboxDismissed.slice(-200);
-  localStorage.setItem('inboxDismissed', JSON.stringify(inboxDismissed));
-  render();
 }
 
 checkSaturdayNotification();
 render();
-loadInboxFeed();
 </script>
 </body>
 </html>
