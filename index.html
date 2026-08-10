@@ -190,7 +190,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .plan-go:active{opacity:0.85}
 .plan-later{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer}
 /* Planning wizard */
-.wizard-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:300;overflow-y:auto;animation:fadeIn 0.2s ease;-webkit-overflow-scrolling:touch}
+.wizard-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:300;overflow-y:auto;overflow-anchor:none;animation:fadeIn 0.2s ease;-webkit-overflow-scrolling:touch}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .wizard-header{padding:16px 20px;background:var(--card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:301}
 .wizard-header h2{font-size:18px;font-weight:600}
@@ -1442,7 +1442,7 @@ function render() {
       hh += '<a href="#" onclick="shopWeekOffset=0;showView(\'list\');return false">Shopping list</a>';
       hh += '</div>';
     }
-    homeEl.innerHTML = hh;
+    if (homeEl.classList.contains('active')) homeEl.innerHTML = hh;
   }
 
   // Browse/Recipes view with favorites on top, search + hidden filter
@@ -1482,7 +1482,7 @@ function render() {
       hiddenRecipes.forEach(r => { browseHTML += renderCard(r, state.selected.includes(r.id), true); });
     }
   }
-  browseEl.innerHTML = browseHTML;
+  if (browseEl.classList.contains('active')) browseEl.innerHTML = browseHTML;
   // Restore cursor position in search
   const si = document.getElementById('browse-search');
   if (si && document.activeElement !== si && q) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
@@ -1555,7 +1555,7 @@ function render() {
       calHTML += '</div></div>';
     });
   }
-  calEl.innerHTML = calHTML;
+  if (calEl.classList.contains('active')) calEl.innerHTML = calHTML;
 
   // Shopping list view — filtered by week
   const shopDates = getWeekDates(shopWeekOffset);
@@ -1576,8 +1576,9 @@ function render() {
   shopHeader += '<button class="cal-nav-btn" onclick="changeShopWeek(1)">&rarr;</button>';
   shopHeader += '</div>';
 
+  const listActive = listEl.classList.contains('active');
   if (shopMealIds.length === 0) {
-    listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Plan the week first, then your list appears here.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
+    if (listActive) listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Plan the week first, then your list appears here.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
   } else {
     // "Checked" means: I already have this at home — leave it off the order.
     let totalItems = 0;
@@ -1590,12 +1591,12 @@ function render() {
 
     let html = shopHeader;
     html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)">';
-    html += '<div style="font-family:var(--font-display);font-size:17px;font-weight:800">' + toOrder + ' item' + (toOrder!==1?'s':'') + ' to order</div>';
-    html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Tick anything you already have &mdash; Copy sends the rest' + (haveItems > 0 ? ' &middot; ' + haveItems + ' marked have' : '') + '</div>';
+    html += '<div id="shop-order-count" style="font-family:var(--font-display);font-size:17px;font-weight:800">' + toOrder + ' item' + (toOrder!==1?'s':'') + ' to order</div>';
+    html += '<div id="shop-order-sub" style="font-size:12px;color:var(--muted);margin-top:2px">Tick anything you already have &mdash; Copy sends the rest' + (haveItems > 0 ? ' &middot; ' + haveItems + ' marked have' : '') + '</div>';
     html += '</div>';
     html += '<div class="list-actions">';
     html += '<button class="btn btn-add" id="copy-list-btn" style="flex:1;padding:12px" onclick="copyShoppingList()">&#128203; Copy ' + toOrder + ' item' + (toOrder!==1?'s':'') + '</button>';
-    if (haveItems > 0) html += '<button class="btn-outline" onclick="uncheckAll()">Clear haves</button>';
+    html += '<button class="btn-outline" id="clear-haves-btn" onclick="uncheckAll()"' + (haveItems > 0 ? '' : ' style="display:none"') + '>Clear haves</button>';
     html += '</div>';
 
     if (noIngRecipes.length > 0) {
@@ -1612,7 +1613,7 @@ function render() {
         html += '<div class="shop-item' + (isHave ? ' checked' : '') + '">';
         html += '<input type="checkbox" ' + (isHave ? 'checked ' : '') + 'data-keys="' + esc(JSON.stringify([...new Set(item.keys)])) + '" onchange="toggleCheckFromEl(this)" title="Tick = already have it">';
         html += '<div class="item-details">';
-        html += '<div class="item-name">' + esc(item.name) + (isHave ? ' <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">have</span>' : '') + '</div>';
+        html += '<div class="item-name">' + esc(item.name) + '<span class="have-badge" style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-left:6px' + (isHave ? '' : ';display:none') + '">have</span></div>';
         html += '<div class="item-qty">' + esc(item.qty) + '</div>';
         html += '<div class="item-meals">';
         const uniqueMeals = [...new Set(item.meals)];
@@ -1622,22 +1623,49 @@ function render() {
         html += '</div></div></div>';
       });
     });
-    listEl.innerHTML = html;
+    if (listActive) listEl.innerHTML = html;
   }
 
   // Keep the viewport where the user left it after an in-place re-render.
   window.scrollTo(0, scrollY);
 }
 
-// Toggle a shop item whose keys are carried on the element (robust to quotes in
-// ingredient names, which broke the old inline-args approach).
+// Toggle a shop item's "have it" state. Updates the DOM in place (no full
+// re-render) so ticking items is instant and never flashes or jumps the scroll.
 function toggleCheckFromEl(el) {
   let keys = [];
   try { keys = JSON.parse(el.getAttribute('data-keys')) || []; } catch(e) {}
-  const allChecked = keys.every(k => state.checked[k]);
-  keys.forEach(k => state.checked[k] = !allChecked);
-  save();
-  render();
+  const nowHave = !keys.every(k => state.checked[k]);
+  keys.forEach(k => state.checked[k] = nowHave);
+  save(); // debounced flush; deliberately no render()
+
+  const row = el.closest('.shop-item');
+  if (row) {
+    row.classList.toggle('checked', nowHave);
+    const badge = row.querySelector('.have-badge');
+    if (badge) badge.style.display = nowHave ? '' : 'none';
+  }
+  updateShopCounts();
+}
+
+// Recompute the "N to order" summary, copy-button label, and Clear-haves
+// visibility from the current checkbox states — cheap, no rebuild.
+function updateShopCounts() {
+  const listEl = document.getElementById('list-view');
+  if (!listEl) return;
+  const boxes = [...listEl.querySelectorAll('.shop-item input[type="checkbox"]')];
+  const total = boxes.length;
+  const have = boxes.filter(b => b.checked).length;
+  const toOrder = total - have;
+  const noun = ' item' + (toOrder !== 1 ? 's' : '');
+  const count = document.getElementById('shop-order-count');
+  if (count) count.textContent = toOrder + noun + ' to order';
+  const sub = document.getElementById('shop-order-sub');
+  if (sub) sub.innerHTML = 'Tick anything you already have &mdash; Copy sends the rest' + (have > 0 ? ' &middot; ' + have + ' marked have' : '');
+  const copy = document.getElementById('copy-list-btn');
+  if (copy) copy.innerHTML = '&#128203; Copy ' + toOrder + noun;
+  const clear = document.getElementById('clear-haves-btn');
+  if (clear) clear.style.display = have > 0 ? '' : 'none';
 }
 
 function getCardBorderClass(r) {
@@ -1790,18 +1818,8 @@ function renderWizard() {
   h += '<p class="wizard-hint">Pull from your library, or go find something new on your sites.</p>';
   h += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button></div>';
 
-  // The basket — what's picked for this week so far
-  if (wizardPicked.length > 0) {
-    h += '<div style="background:var(--accent-light);border-radius:12px;padding:10px 12px;margin-bottom:12px">';
-    h += '<div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent-text);margin-bottom:6px">In the basket &middot; ' + wizardPicked.length + '</div>';
-    h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
-    wizardPicked.forEach(id => {
-      const r = getAllRecipes().find(x => x.id === id);
-      if (!r) return;
-      h += '<span style="font-size:12px;padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer" onclick="toggleWizardPick(\'' + id + '\')" title="Remove from basket">' + esc(r.name) + ' &times;</span>';
-    });
-    h += '</div></div>';
-  }
+  // The basket — what's picked for this week so far (updated in place on toggle).
+  h += '<div id="wizard-basket">' + wizardBasketHtml() + '</div>';
 
   // Library — favorites first, searchable, one tap to pick
   h += '<div class="section-label" style="padding-top:4px">From your library</div>';
@@ -1815,7 +1833,7 @@ function renderWizard() {
     const isPicked = wizardPicked.includes(r.id);
     const isFav = state.favorites.includes(r.id);
     const lc = lastCooked[r.id];
-    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" data-name="' + esc(r.name.toLowerCase()) + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
+    h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + '" data-id="' + esc(r.id) + '" data-name="' + esc(r.name.toLowerCase()) + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
     h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + (isFav ? '&#9733; ' : '') + esc(r.name) + '</div>';
     h += '<div class="wizard-recipe-meta">' + (lc ? 'last cooked ' + weeksAgo(lc) + 'w ago &middot; ' : '') + 'serves ' + esc(r.servings) + '</div></div>';
     h += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
@@ -1834,12 +1852,8 @@ function renderWizard() {
 
   h += '</div>';
   h += '<div class="wizard-footer">';
-  h += '<div class="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' in the basket</div>';
-  if (wizardPicked.length > 0) {
-    h += '<button class="btn btn-add" onclick="wizardContinue()">Next: Assign days &#8250;</button>';
-  } else {
-    h += '<button class="btn btn-add" style="opacity:0.4;cursor:default">Next: Assign days &#8250;</button>';
-  }
+  h += '<div class="wizard-count" id="wizard-count">' + wizardPicked.length + ' meal' + (wizardPicked.length!==1?'s':'') + ' in the basket</div>';
+  h += '<span id="wizard-next">' + wizardNextBtnHtml() + '</span>';
   h += '</div></div>';
 
   document.body.insertAdjacentHTML('beforeend', h);
@@ -1860,11 +1874,51 @@ function filterWizardList(q) {
   });
 }
 
+function wizardBasketHtml() {
+  if (wizardPicked.length === 0) return '';
+  let h = '<div style="background:var(--accent-light);border-radius:12px;padding:10px 12px;margin-bottom:12px">';
+  h += '<div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent-text);margin-bottom:6px">In the basket &middot; ' + wizardPicked.length + '</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  wizardPicked.forEach(id => {
+    const r = getAllRecipes().find(x => x.id === id);
+    if (!r) return;
+    h += '<span style="font-size:12px;padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer" onclick="toggleWizardPick(\'' + id + '\')" title="Remove from basket">' + esc(r.name) + ' &times;</span>';
+  });
+  h += '</div></div>';
+  return h;
+}
+
+function wizardNextBtnHtml() {
+  return wizardPicked.length > 0
+    ? '<button class="btn btn-add" onclick="wizardContinue()">Next: Assign days &#8250;</button>'
+    : '<button class="btn btn-add" style="opacity:0.4;cursor:default">Next: Assign days &#8250;</button>';
+}
+
+// Toggle a Gather pick in place — flip the row, refresh the basket/footer, and
+// keep the library rows anchored when the basket grows/shrinks above them.
+// No overlay rebuild → no flash, no focus loss.
 function toggleWizardPick(id) {
   const idx = wizardPicked.indexOf(id);
-  if (idx === -1) wizardPicked.push(id);
-  else wizardPicked.splice(idx, 1);
-  renderWizard();
+  const picking = idx === -1;
+  if (picking) wizardPicked.push(id); else wizardPicked.splice(idx, 1);
+
+  const wiz = document.getElementById('planning-wizard');
+  if (!wiz) { renderWizard(); return; }
+  const beforeH = wiz.scrollHeight;
+
+  wiz.querySelectorAll('.wizard-recipe[data-id="' + id + '"]').forEach(row => {
+    row.classList.toggle('picked', picking);
+    const chk = row.querySelector('.wizard-check');
+    if (chk) chk.innerHTML = picking ? '&#10003;' : '';
+  });
+  const basket = document.getElementById('wizard-basket');
+  if (basket) basket.innerHTML = wizardBasketHtml();
+  const cnt = document.getElementById('wizard-count');
+  if (cnt) cnt.textContent = wizardPicked.length + ' meal' + (wizardPicked.length !== 1 ? 's' : '') + ' in the basket';
+  const next = document.getElementById('wizard-next');
+  if (next) next.innerHTML = wizardNextBtnHtml();
+
+  wiz.scrollTop = Math.max(0, wiz.scrollTop + (wiz.scrollHeight - beforeH));
 }
 
 function closeWizard() {
