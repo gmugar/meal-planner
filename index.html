@@ -993,9 +993,27 @@ function moveMealToDay(fromDate, toDate, mealId) {
 (function initMealDrag() {
   var THRESHOLD = 6;      // px of movement before a press becomes a drag
   var start = null, dragging = false, ghost = null, lastZone = null, suppressClick = false;
+  var lastX = 0, lastY = 0, scrollRAF = null;
 
   function moveGhost(x, y) {
     if (ghost) ghost.style.transform = 'translate(' + (x + 12) + 'px,' + (y + 14) + 'px)';
+  }
+
+  // While dragging near the top/bottom edge, scroll the page so off-screen days
+  // come into view and become droppable (elementFromPoint returns null for points
+  // outside the viewport, so without this you can't drop on a day you can't see).
+  function edgeAutoScroll() {
+    scrollRAF = null;
+    if (!dragging) return;
+    var margin = 90, vy = 0;
+    if (lastY < margin) vy = -Math.ceil((margin - lastY) / 5);
+    else if (lastY > window.innerHeight - margin) vy = Math.ceil((lastY - (window.innerHeight - margin)) / 5);
+    if (vy !== 0) {
+      var before = window.scrollY;
+      window.scrollBy(0, vy);
+      if (window.scrollY !== before) { moveGhost(lastX, lastY); highlight(zoneAt(lastX, lastY)); }
+    }
+    scrollRAF = requestAnimationFrame(edgeAutoScroll);
   }
 
   function zoneAt(x, y) {
@@ -1020,12 +1038,15 @@ function moveMealToDay(fromDate, toDate, mealId) {
     ghost.textContent = start.name;
     document.body.appendChild(ghost);
     moveGhost(start.x, start.y);
+    lastX = start.x; lastY = start.y;
+    scrollRAF = requestAnimationFrame(edgeAutoScroll);
   }
 
   function cleanup() {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup', onUp);
     document.removeEventListener('pointercancel', onUp);
+    if (scrollRAF) { cancelAnimationFrame(scrollRAF); scrollRAF = null; }
     if (ghost) { ghost.remove(); ghost = null; }
     if (lastZone) { lastZone.classList.remove('drop-target-active'); lastZone = null; }
     if (start && start.el) start.el.classList.remove('dragging-source');
@@ -1058,6 +1079,7 @@ function moveMealToDay(fromDate, toDate, mealId) {
       beginDrag();
     }
     e.preventDefault();
+    lastX = e.clientX; lastY = e.clientY;
     moveGhost(e.clientX, e.clientY);
     highlight(zoneAt(e.clientX, e.clientY));
   }
