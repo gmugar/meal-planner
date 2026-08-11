@@ -1526,30 +1526,9 @@ function render() {
     calHTML += '<button class="btn-outline" onclick="if(confirm(\'Clear all meals from this week?\')){clearWeek(' + calWeekOffset + ')}">&#128465; Clear week</button>';
     calHTML += '</div>';
   }
-  if (state.selected.length === 0) {
-    calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>No meals planned yet.<br>Start by picking recipes for this week.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
+  if (getMealOccurrences(calWeekOffset).length === 0) {
+    calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>No meals planned this week.<br>Pick recipes and assign them to days.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
   } else {
-    // Unassigned meals inbox — meals selected but not on any day this week
-    const assignedThisWeek = new Set();
-    weekDates.forEach(d => {
-      (state.calendar[dateKey(d)]||[]).forEach(id => assignedThisWeek.add(id));
-    });
-    const unassigned = state.selected.filter(id => !assignedThisWeek.has(id)).map(id => getAllRecipes().find(r=>r.id===id)).filter(Boolean);
-    if (unassigned.length > 0) {
-      calHTML += '<div class="inbox-section">';
-      calHTML += '<div class="inbox-label">&#128229; Unassigned (' + unassigned.length + ')</div>';
-      unassigned.forEach(r => {
-        calHTML += '<div class="inbox-meal" data-drag-recipe="' + r.id + '" data-drag-from="">';
-        calHTML += '<span class="drag-handle" data-drag-handle title="Drag to a day">&#8942;&#8942;</span>';
-        calHTML += '<span class="inbox-meal-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</span>';
-        calHTML += '<div class="inbox-meal-actions">';
-        calHTML += '<button class="inbox-assign-btn" onclick="openInboxAssign(\'' + r.id + '\')">Assign</button>';
-        calHTML += '<button class="inbox-remove-btn" onclick="toggleMeal(\'' + r.id + '\')" title="Remove meal">&times;</button>';
-        calHTML += '</div></div>';
-      });
-      calHTML += '</div>';
-    }
-
     weekDates.forEach(d => {
       const dk = dateKey(d);
       const today = isToday(d);
@@ -1802,7 +1781,10 @@ function closeWeekPicker() {
 
 function selectWeekAndPlan(offset) {
   wizardWeekOffset = offset;
-  wizardPicked = [...state.selected];
+  // Start the basket from what's already planned for THIS week — empty for a
+  // fresh week, or its meals when editing. Not the global selected pool, which
+  // carried recipes across weeks and made every new week start pre-filled.
+  wizardPicked = getMealsForWeek(offset);
   closeWeekPicker();
   renderWizard();
 }
