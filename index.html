@@ -1172,13 +1172,7 @@ function openRecipeDetail(mealId) {
     h += '<p class="detail-desc" style="color:var(--muted);font-style:italic">No ingredients yet — use “Edit ingredients” below so this shows up on your shopping list.</p>';
   }
   h += '<a class="detail-source" href="' + r.url + '" target="_blank">View full recipe on ' + r.site + ' &#8599;</a>';
-  const inPlan = state.selected.includes(r.id);
-  if (inPlan) {
-    h += '<button class="btn btn-remove" style="width:100%;margin-top:12px;padding:12px" onclick="toggleMeal(\'' + r.id + '\');closeRecipeDetail()">Remove from plan</button>';
-  } else {
-    h += '<button class="btn btn-add" style="width:100%;margin-top:12px;padding:12px" onclick="toggleMeal(\'' + r.id + '\');closeRecipeDetail()">Add to plan</button>';
-  }
-  h += '<button class="modal-cancel" onclick="openIngredientEditor(\'' + r.id + '\')" style="margin-top:8px">&#9998; Edit ingredients</button>';
+  h += '<button class="modal-cancel" onclick="openIngredientEditor(\'' + r.id + '\')" style="margin-top:12px">&#9998; Edit ingredients</button>';
   h += '<button class="modal-cancel" onclick="if(confirm(\'Delete this recipe? This can\\\'t be undone.\')){deleteCustomRecipe(\'' + r.id + '\');closeRecipeDetail()}" style="color:#c0392b;margin-top:8px;border:1px solid #c0392b">Delete recipe</button>';
   h += '<button class="modal-cancel" onclick="closeRecipeDetail()">Close</button>';
   h += '</div></div>';
@@ -1695,18 +1689,14 @@ function renderCard(r, isSelected, isHiddenCard) {
   html += '</div>';
   if (r.desc) html += '<div class="card-desc">' + esc(r.desc) + '</div>';
   html += '</div></div>';
+  // Library is reference/management only — planning happens in the weekly ritual.
   html += '<div class="card-actions">';
   if (isHiddenCard) {
     html += '<button class="btn btn-add btn-sm" onclick="unhideRecipe(\'' + r.id + '\')">Unhide</button>';
   } else {
     html += '<button class="btn-star' + (isFav ? ' starred' : '') + '" onclick="toggleFavorite(\'' + r.id + '\')" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + (isFav ? '&#9733;' : '&#9734;') + '</button>';
-    html += '<button class="btn-cal-quick" onclick="event.stopPropagation();quickAddToDay(\'' + r.id + '\')" title="Add to a day" aria-label="Add to a day">&#128197;</button>';
     html += '<button class="btn-hide" onclick="event.stopPropagation();hideRecipe(\'' + r.id + '\')" title="Hide recipe">&#10005;</button>';
-    if (isSelected) {
-      html += '<button class="btn btn-remove btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Remove</button>';
-    } else {
-      html += '<button class="btn btn-add btn-sm" onclick="toggleMeal(\'' + r.id + '\')">Add</button>';
-    }
+    html += '<button class="btn btn-add btn-sm" onclick="openRecipeDetail(\'' + r.id + '\')">View</button>';
   }
   html += '</div></div>';
   html += '</div>';
