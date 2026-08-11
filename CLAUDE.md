@@ -21,8 +21,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Everything below lives inside `index.html` (a `<style>` block at the top, then one large `<script>`, ~2100 lines total).
 
-**Single global `state` object** (defined ~line 475) is the whole app model:
-`{ selected, checked, favorites, calendar, customRecipes, mealTypes, hidden }`.
+**Single global `state` object** is the whole app model:
+`{ checked, favorites, calendar, customRecipes, mealTypes, hidden }`. The plan for a week IS `state.calendar` — there is no separate "selected" pool (it was retired when the Library became reference-only; don't reintroduce it).
 
 **Local-first sync engine** (`save()` → `persistLocal()` + debounced `flushToSupabase()`):
 1. Every mutation calls `save()`, which stamps `localUpdatedAt = Date.now()`, writes `localStorage` synchronously (never dropped), and schedules a debounced flush.
