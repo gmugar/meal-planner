@@ -315,7 +315,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 <div id="plan-notification"></div>
 
 <div class="tabs">
-  <button class="tab active" onclick="showView('home')"><span class="tab-icon">&#127859;</span>This week</button>
+  <button class="tab active" onclick="homeWeekOffset=0;showView('home')"><span class="tab-icon">&#127859;</span>This week</button>
   <button class="tab" onclick="showView('browse')"><span class="tab-icon">&#9776;</span>Library<span class="badge" id="browse-count">0</span></button>
 </div>
 
@@ -775,8 +775,11 @@ function uncheckAll() {
 /* ── Calendar ── */
 let calWeekOffset = 0;
 let shopWeekOffset = 0;
+let homeWeekOffset = 0;
 let pickerDate = null;
 let browseSearch = '';
+
+function changeHomeWeek(dir) { homeWeekOffset += dir; render(); }
 
 function getWeekDates(offset) {
   const now = new Date();
@@ -1305,39 +1308,49 @@ function render() {
   const browseCount = document.getElementById('browse-count');
   if (browseCount) browseCount.textContent = getAllRecipes().length || '';
 
-  // Home — "This week": tonight's dinner, the week at a glance, quiet links.
+  // Home — "This week": tonight's dinner and the week at a glance, with prev/next
+  // to view weeks planned in advance (and page back through history).
   const homeEl = document.getElementById('home-view');
   if (homeEl) {
-    const homeDates = getWeekDates(0);
+    const homeDates = getWeekDates(homeWeekOffset);
     const todayK = dateKey(new Date());
-    const weekHasPlan = getMealOccurrences(0).length > 0;
+    const weekHasPlan = getMealOccurrences(homeWeekOffset).length > 0;
+    const homeIsThisWeek = homeWeekOffset === 0;
     let hh = '';
+    hh += '<div class="cal-header" style="margin-top:4px">';
+    hh += '<button class="cal-nav-btn" onclick="changeHomeWeek(-1)">&larr;</button>';
+    hh += '<h2>' + fmtDate(homeDates[0]) + ' — ' + fmtDate(homeDates[6]) + (homeIsThisWeek ? ' · This week' : (homeWeekOffset === 1 ? ' · Next week' : '')) + '</h2>';
+    hh += '<button class="cal-nav-btn" onclick="changeHomeWeek(1)">&rarr;</button>';
+    hh += '</div>';
     if (!weekHasPlan) {
-      hh += '<div class="empty"><div class="icon">&#127859;</div><p>Nothing planned this week.<br>Pick recipes, assign days, copy your list.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
+      hh += '<div class="empty"><div class="icon">&#127859;</div><p>Nothing planned' + (homeIsThisWeek ? ' this week' : ' for this week') + '.<br>Pick recipes, assign days, copy your list.</p><button class="empty-cta" onclick="selectWeekAndPlan(' + homeWeekOffset + ')">Plan this week</button></div>';
     } else {
-      const todayMeals = (state.calendar[todayK]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
-      if (todayMeals.length > 0) {
-        const hero = todayMeals[0];
-        hh += '<div class="home-hero">';
-        hh += '<div class="home-hero-label">Tonight &middot; ' + dayName(new Date()) + '</div>';
-        todayMeals.forEach(r => {
-          hh += '<div class="home-hero-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</div>';
-        });
-        hh += '<div class="home-hero-meta">serves ' + esc(hero.servings) + (hero.site ? ' &middot; ' + esc(hero.site) : '') + '</div>';
-        hh += '<button class="btn btn-add btn-sm" style="margin-top:12px" onclick="openRecipeDetail(\'' + hero.id + '\')">View recipe</button>';
-        hh += '</div>';
-      } else {
-        let next = null;
-        for (const d of homeDates) {
-          if (isPast(d) || isToday(d)) continue;
-          const ms = (state.calendar[dateKey(d)]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
-          if (ms.length) { next = { d, r: ms[0] }; break; }
+      // Tonight's dinner hero — only meaningful for the current week.
+      if (homeIsThisWeek) {
+        const todayMeals = (state.calendar[todayK]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
+        if (todayMeals.length > 0) {
+          const hero = todayMeals[0];
+          hh += '<div class="home-hero">';
+          hh += '<div class="home-hero-label">Tonight &middot; ' + dayName(new Date()) + '</div>';
+          todayMeals.forEach(r => {
+            hh += '<div class="home-hero-name" onclick="openRecipeDetail(\'' + r.id + '\')">' + esc(r.name) + '</div>';
+          });
+          hh += '<div class="home-hero-meta">serves ' + esc(hero.servings) + (hero.site ? ' &middot; ' + esc(hero.site) : '') + '</div>';
+          hh += '<button class="btn btn-add btn-sm" style="margin-top:12px" onclick="openRecipeDetail(\'' + hero.id + '\')">View recipe</button>';
+          hh += '</div>';
+        } else {
+          let next = null;
+          for (const d of homeDates) {
+            if (isPast(d) || isToday(d)) continue;
+            const ms = (state.calendar[dateKey(d)]||[]).map(id => getAllRecipes().find(r => r.id === id)).filter(Boolean);
+            if (ms.length) { next = { d, r: ms[0] }; break; }
+          }
+          hh += '<div class="home-hero" style="border-left-color:var(--border)">';
+          hh += '<div class="home-hero-label" style="color:var(--muted)">Tonight &middot; ' + dayName(new Date()) + '</div>';
+          hh += '<div class="home-hero-name" style="color:var(--muted);cursor:default">Nothing planned tonight</div>';
+          if (next) hh += '<div class="home-hero-meta">Next up: ' + dayName(next.d) + ' &middot; ' + esc(next.r.name) + '</div>';
+          hh += '</div>';
         }
-        hh += '<div class="home-hero" style="border-left-color:var(--border)">';
-        hh += '<div class="home-hero-label" style="color:var(--muted)">Tonight &middot; ' + dayName(new Date()) + '</div>';
-        hh += '<div class="home-hero-name" style="color:var(--muted);cursor:default">Nothing planned tonight</div>';
-        if (next) hh += '<div class="home-hero-meta">Next up: ' + dayName(next.d) + ' &middot; ' + esc(next.r.name) + '</div>';
-        hh += '</div>';
       }
       hh += '<div class="home-week">';
       homeDates.forEach(d => {
@@ -1359,8 +1372,8 @@ function render() {
       });
       hh += '</div>';
       hh += '<div class="home-links">';
-      hh += '<a href="#" onclick="calWeekOffset=0;showView(\'calendar\');return false">Edit week</a>';
-      hh += '<a href="#" onclick="shopWeekOffset=0;showView(\'list\');return false">Shopping list</a>';
+      hh += '<a href="#" onclick="calWeekOffset=' + homeWeekOffset + ';showView(\'calendar\');return false">Edit week</a>';
+      hh += '<a href="#" onclick="shopWeekOffset=' + homeWeekOffset + ';showView(\'list\');return false">Shopping list</a>';
       hh += '</div>';
     }
     if (homeEl.classList.contains('active')) homeEl.innerHTML = hh;
