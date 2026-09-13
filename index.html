@@ -2005,6 +2005,8 @@ function wizardFinish() {
 }
 
 /* ── Recipe import from URL ── */
+// Set to the deployed Worker origin (see worker/README.md).
+const RECIPE_FETCH_URL = 'https://meal-planner-sources.gmugar-skillet.workers.dev';
 function openImportModal() {
   const old = document.getElementById('import-modal');
   if (old) old.remove();
@@ -2034,17 +2036,29 @@ async function doImport() {
   const statusEl = document.getElementById('import-status');
   const previewEl = document.getElementById('import-preview-area');
   const btn = document.getElementById('import-btn');
-  const url = urlInput.value.trim();
-  if (!url) { statusEl.className='import-status error'; statusEl.textContent='Please enter a URL'; return; }
+  if (btn.disabled) return;
+  let url;
+  try {
+    url = new URL(urlInput.value.trim());
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error();
+    url = url.href;
+  } catch (_) {
+    statusEl.className='import-status error';
+    statusEl.textContent='Enter a complete recipe URL beginning with https:// or http://.';
+    return;
+  }
 
   btn.disabled = true;
+  urlInput.disabled = true;
+  const fallback = document.getElementById('import-manual');
+  if (fallback) fallback.remove();
   statusEl.className='import-status';
   statusEl.innerHTML='<span class="spinner"></span>Fetching recipe...';
   previewEl.innerHTML='';
 
   try {
-    const html = await fetchHtmlViaProxies(url);
-    if (!html) throw new Error('Could not fetch page. The site may be blocking access.');
+    const html = await fetchRecipeHtml(url);
+    if (!html) throw new Error('We couldn’t retrieve this page. The site or a connection service may be unavailable or blocking requests.');
 
     const recipe = parseRecipeFromHtml(html, url);
     if (!recipe) throw new Error('No recipe data found on this page. Try a recipe page with structured data.');
@@ -2057,27 +2071,79 @@ async function doImport() {
     btn.onclick = function() { confirmImport(recipe); };
   } catch(e) {
     statusEl.className='import-status error';
-    statusEl.textContent='Error: ' + e.message;
+    statusEl.textContent=e.message + ' You can retry, or paste the ingredients below.';
+    urlInput.disabled=false;
+    showManualImport(url, previewEl);
     btn.disabled=false;
     btn.textContent='Import Recipe';
     btn.onclick=doImport;
   }
 }
 
+// Keep the source link when automatic retrieval is unavailable.
+function showManualImport(url, container) {
+  container.innerHTML = '<div class="import-preview" id="import-manual">' +
+    '<h4>Add ingredients yourself</h4><p class="modal-sub"><a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Open the recipe</a>, then copy its ingredients here.</p>' +
+    '<label for="import-name">Recipe name</label><input class="import-input" id="import-name" type="text">' +
+    '<label for="import-servings">Servings</label><input class="import-input" id="import-servings" type="number" min="1" step="1" value="4">' +
+    '<label for="import-ingredients">Ingredients (one per line)</label><textarea class="import-input" id="import-ingredients" rows="7" placeholder="2 cups rice&#10;1 onion"></textarea>' +
+    '<button class="btn-import" id="import-manual-btn">Preview recipe</button></div>';
+  document.getElementById('import-manual-btn').onclick = function() {
+    const name = document.getElementById('import-name').value.trim();
+    const servings = Number(document.getElementById('import-servings').value);
+    const ingredients = parseIngredientLines(document.getElementById('import-ingredients').value);
+    const status = document.getElementById('import-status');
+    if (!name || !ingredients.length || !Number.isInteger(servings) || servings < 1) {
+      status.className = 'import-status error';
+      status.textContent = 'Enter a recipe name, a positive whole number of servings, and at least one ingredient.';
+      return;
+    }
+    const recipe = { id: 'custom_' + Date.now(), name, servings, ingredients,
+      site: new URL(url).hostname.replace('www.', ''), url, desc: '', tags: [], custom: true };
+    showImportPreview(recipe, container);
+    document.getElementById('import-url').disabled = true;
+    status.className = 'import-status';
+    status.textContent = 'Review your recipe before adding it.';
+    const btn = document.getElementById('import-btn');
+    btn.textContent = 'Add to Meal Planner';
+    btn.onclick = function() { confirmImport(recipe); };
+  };
+}
+
+// Prefer our own service once its deployed URL is configured.
+async function fetchRecipeHtml(url) {
+  if (!RECIPE_FETCH_URL) return fetchHtmlViaProxies(url);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const endpoint = new URL('/recipe', RECIPE_FETCH_URL);
+    endpoint.searchParams.set('url', url);
+    const response = await fetch(endpoint.href, { signal: controller.signal });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'The recipe service could not retrieve this page.');
+    if (typeof result.html !== 'string' || !result.html.trim()) throw new Error('The recipe page was empty.');
+    return result.html;
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('The recipe service took too long to respond.');
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+
 // Fetch a page's HTML through CORS proxies. Returns the HTML string or null.
 async function fetchHtmlViaProxies(url) {
   const proxies = [
     { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(url), json: true, field: 'contents' },
-    { url: 'https://corsproxy.io/?' + encodeURIComponent(url), json: false },
     { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), json: false }
   ];
   for (const proxy of proxies) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const res = await fetch(proxy.url);
+      const res = await fetch(proxy.url, { signal: controller.signal });
       if (!res.ok) continue;
       let html = proxy.json ? (await res.json())[proxy.field] : await res.text();
-      if (html && html.length > 500) return html;
-    } catch(e) { continue; }
+      if (typeof html === 'string' && html.trim()) return html;
+    } catch(e) { continue; } finally { clearTimeout(timeout); }
   }
   return null;
 }

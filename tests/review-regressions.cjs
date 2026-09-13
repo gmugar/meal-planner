@@ -91,3 +91,77 @@ test('planning opens at the top and preserves position during a refresh', () => 
   ctx.renderWizard();
   assert.equal(current.scrollTop, 0);
 });
+
+test('URL retrieval advances after timeout and clears timers', async () => {
+  let attempts = 0, cleared = 0;
+  const ctx = run(section('async function fetchHtmlViaProxies(', '// Split a raw ingredient'), {
+    AbortController,
+    setTimeout(fn) { queueMicrotask(fn); return 1; },
+    clearTimeout() { cleared++; },
+    fetch: async (_, { signal }) => {
+      attempts++;
+      if (attempts === 1) return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('timeout'))));
+      return { ok: true, text: async () => '<html>Recipe</html>' };
+    }
+  });
+  assert.equal(await ctx.fetchHtmlViaProxies('https://example.com/recipe'), '<html>Recipe</html>');
+  assert.equal(attempts, 2);
+  assert.equal(cleared, 2);
+});
+
+test('failed fetch offers manual entry; invalid URLs make no requests', async () => {
+  const elements = Object.fromEntries(['import-url', 'import-status', 'import-preview-area', 'import-btn'].map(id => [id, { value: '', disabled: false }]));
+  let requests = 0, fallbackURL;
+  const ctx = run(section('async function doImport(', '// Keep the source link'), {
+    URL, document: { getElementById: id => elements[id] },
+    fetchRecipeHtml: async () => { requests++; return null; },
+    showManualImport: url => { fallbackURL = url; }
+  });
+  elements['import-url'].value = 'javascript:alert(1)';
+  await ctx.doImport();
+  assert.equal(requests, 0);
+  elements['import-url'].value = 'https://example.com/recipe';
+  await ctx.doImport();
+  assert.equal(fallbackURL, 'https://example.com/recipe');
+  assert.equal(elements['import-btn'].disabled, false);
+  assert.equal(elements['import-url'].disabled, false);
+});
+
+test('manual import validates ingredients and preserves source in preview and save', () => {
+  const elements = Object.fromEntries(['import-manual-btn', 'import-name', 'import-servings', 'import-ingredients', 'import-status', 'import-url', 'import-btn'].map(id => [id, { value: '' }]));
+  let preview, saved;
+  const ctx = run(section('function esc(', '// Recipe source sites') + section('function showManualImport(', '// Fetch a page') + section('function splitQtyName(', 'function parseRecipeFromHtml('), {
+    URL, document: { getElementById: id => elements[id] },
+    showImportPreview: recipe => { preview = recipe; }, confirmImport: recipe => { saved = recipe; }
+  });
+  ctx.showManualImport('https://example.com/recipe', {});
+  elements['import-manual-btn'].onclick();
+  assert.equal(preview, undefined);
+  elements['import-name'].value = 'Rice';
+  elements['import-servings'].value = '2';
+  elements['import-ingredients'].value = '2 cups rice';
+  elements['import-manual-btn'].onclick();
+  assert.equal(preview.url, 'https://example.com/recipe');
+  assert.equal(preview.ingredients[0].items[0].qty, '2 cups');
+  assert.equal(preview.servings, 2);
+  assert.equal(saved, undefined);
+  elements['import-btn'].onclick();
+  assert.equal(saved, preview);
+});
+
+test('configured recipe service returns HTML and exposes actionable errors', async () => {
+  let fail = false;
+  const ctx = run(section('async function fetchRecipeHtml(', '// Fetch a page'), {
+    RECIPE_FETCH_URL: 'https://skillet.example', URL, AbortController, setTimeout, clearTimeout,
+    fetch: async address => {
+      const endpoint = new URL(address);
+      assert.equal(endpoint.origin, 'https://skillet.example');
+      assert.equal(endpoint.pathname, '/recipe');
+      assert.equal(endpoint.searchParams.get('url'), 'https://simplehomeedit.com/recipe/test/');
+      return { ok: !fail, json: async () => fail ? { error: 'The recipe site returned HTTP 403.' } : { html: '<html>recipe</html>' } };
+    }
+  });
+  assert.equal(await ctx.fetchRecipeHtml('https://simplehomeedit.com/recipe/test/'), '<html>recipe</html>');
+  fail = true;
+  await assert.rejects(ctx.fetchRecipeHtml('https://simplehomeedit.com/recipe/test/'), /HTTP 403/);
+});

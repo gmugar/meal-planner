@@ -1,3 +1,5 @@
+import { fetchRecipe } from "./recipe.js";
+
 // Cloudflare Worker: writes the meal-planner's sources.json to GitHub.
 // Secrets (set with `wrangler secret put`):
 //   GITHUB_TOKEN  – fine-grained PAT with Contents: Read & Write on gmugar/meal-planner
@@ -9,6 +11,7 @@ const ALLOWED_ORIGIN = "https://gmugar.github.io";
 
 export default {
   async fetch(req, env) {
+    if (new URL(req.url).pathname === "/recipe") return fetchRecipe(req, env);
     const cors = {
       "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
       "Access-Control-Allow-Methods": "POST, OPTIONS",

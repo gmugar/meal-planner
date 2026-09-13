@@ -1,33 +1,56 @@
-# Meal Planner — sources sync Worker
+# Skillet Worker
 
-A tiny Cloudflare Worker that lets the (static) meal-planner app save its recipe
-**sources** back to the GitHub repo. The app POSTs the edited list here; the Worker
-commits `sources.json` to `gmugar/meal-planner`. The weekly scraper then reads
-`sources.json`, so in-app edits flow through with no manual step.
+Deployed origin: `https://meal-planner-sources.gmugar-skillet.workers.dev`.
 
-## One-time deploy
+The Worker serves two routes:
 
-1. Install the CLI: `npm install -g wrangler`
-2. Log in to Cloudflare (free account is fine): `wrangler login`
-3. From this `worker/` folder, set the secrets:
-   - `wrangler secret put GITHUB_TOKEN`
-     Paste a **fine-grained** GitHub PAT scoped to `gmugar/meal-planner` with
-     **Contents: Read and write**. (Make a fresh one for this — don't reuse the
-     scraper's token.)
-   - `wrangler secret put APP_KEY`  *(optional but recommended)*
-     Any random string; the app sends it so random visitors can't write.
-4. Deploy: `wrangler deploy`
-5. Copy the printed URL, e.g. `https://meal-planner-sources.<you>.workers.dev`
+- `GET /recipe?url=<encoded HTTPS recipe URL>` fetches recipe HTML and returns
+  `{ "html": "...", "url": "final URL" }` as JSON. The browser parses its recipe
+  data without rendering the returned HTML.
+- The existing POST handler saves the source list to GitHub. Its `GITHUB_TOKEN`
+  and optional `APP_KEY` secrets are separate from the read-only recipe route.
 
-## Wire it into the app
+Recipe fetching supports Simple Home Edit, Budget Bytes, and Half Baked Harvest
+(including their `www` hosts). To add publishers, set the optional `RECIPE_HOSTS`
+Worker variable to a comma-separated list of exact hostnames. This replaces the
+built-in list. Only add trusted public recipe publishers. Each redirect is
+validated against this list, HTTPS is required, and credentials and custom ports
+are rejected. Requests have a 12-second deadline, three-redirect limit, and 2 MiB
+body limit. Upstream error responses are returned as JSON errors rather than
+recipe HTML. No GitHub credentials, browser cookies, or authorization headers
+are sent to recipe sites.
 
-Send me the Worker URL (and the APP_KEY if you set one) and I'll drop them into
-`index.html` (`SOURCES_SYNC_URL` / `SOURCES_SYNC_KEY`) and push — or set them yourself
-at the top of the sources section in `index.html`.
+CORS permits `https://gmugar.github.io` and local preview at port 8000. This is a
+public read endpoint; CORS is not authentication. Publisher restrictions keep it
+from being a general-purpose proxy. Some publishers can still deny server
+requests; the app offers manual ingredient entry for these cases.
 
-## Security notes
+## Deploy and connect
 
-- The Worker only ever writes `sources.json`, and sanitizes/caps the payload, so the
-  blast radius is limited to "which sites get scraped."
-- It only accepts requests from the app's origin and (if set) the APP_KEY.
-- The GitHub token lives as a Cloudflare secret, never in the public page.
+From this directory:
+
+```sh
+npx wrangler login
+npx wrangler deploy
+```
+
+Set `RECIPE_FETCH_URL` in `../index.html` to the Worker origin printed by deploy
+(e.g. `https://meal-planner-sources.<account-subdomain>.workers.dev`). Then publish
+the app via its normal GitHub Pages deployment. Until configured, the app uses
+its legacy public proxies. No secret is needed by the recipe route.
+
+For the optional source-saving route, configure `GITHUB_TOKEN` (fine-grained PAT
+with Contents read/write on `gmugar/meal-planner`) and optionally `APP_KEY` using
+`npx wrangler secret put NAME`. Existing deployed secrets are preserved.
+
+## Verify
+
+```sh
+node --test ../tests/*.cjs
+npx wrangler deploy --dry-run
+npx wrangler dev --port 8787
+```
+
+For a local app preview, temporarily set `RECIPE_FETCH_URL` to
+`http://localhost:8787` and serve the app on port 8000. Test a supported recipe
+URL and verify title, servings, and ingredients before saving.
