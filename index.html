@@ -698,7 +698,6 @@ function showView(view) {
   // Two tabs: "This week" owns home + its sub-surfaces (calendar editor, list); Library is browse.
   const tabIdx = view === 'browse' ? 1 : 0;
   document.querySelectorAll('.tab')[tabIdx].classList.add('active');
-  if (view === 'list') shopWeekOffset = calWeekOffset;
   render();
   window.scrollTo(0, 0); // fresh tab starts at the top
 }
@@ -1126,15 +1125,18 @@ function parseQty(s) {
   const xMatch = str.match(/^(\d+)\s*x\s*(.+)$/i);
   if (xMatch) { str = xMatch[2]; }
   const mult = xMatch ? parseInt(xMatch[1]) : 1;
-  // Extract number and unit
-  let num = 0;
-  const m = str.match(/^(\d+)?\s*([¼-¾⅐-⅞½⅓⅔¼¾⅛⅜⅝⅞])?\s*(.*)$/);
+  // Match mixed/slash fractions before decimals and whole numbers.
+  const m = str.match(/^(?:(\d+)\s+(\d+)\s*\/\s*(\d+)|(\d+)\s*\/\s*(\d+)|(\d+)?\s*([½⅓⅔¼¾⅛⅜⅝⅞])|((?:\d+\.?\d*|\.\d+)))\s*(.*)$/);
   if (!m) return null;
-  if (m[1]) num += parseInt(m[1]);
-  if (m[2] && fracs[m[2]]) num += fracs[m[2]];
-  if (num === 0) return null;
+  let num;
+  if (m[1] !== undefined) num = Number(m[1]) + Number(m[2]) / Number(m[3]);
+  else if (m[4] !== undefined) num = Number(m[4]) / Number(m[5]);
+  else if (m[7]) num = Number(m[6] || 0) + fracs[m[7]];
+  else num = Number(m[8]);
+  // Leave unsupported ranges or malformed amounts intact rather than miscounting.
+  if (!Number.isFinite(num) || num <= 0 || /^[\d./–—-]/.test(m[9])) return null;
   num *= mult;
-  const unit = m[3].trim().toLowerCase();
+  const unit = m[9].trim().toLowerCase();
   return { num, unit };
 }
 function formatQty(num, unit) {
@@ -1439,7 +1441,7 @@ function render() {
     calHTML += '</div>';
   }
   if (getMealOccurrences(calWeekOffset).length === 0) {
-    calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>No meals planned this week.<br>Pick recipes and assign them to days.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
+    calHTML += '<div class="empty"><div class="icon">&#128197;</div><p>No meals planned this week.<br>Pick recipes and assign them to days.</p><button class="empty-cta" onclick="selectWeekAndPlan(' + calWeekOffset + ')">Plan this week</button></div>';
   } else {
     weekDates.forEach(d => {
       const dk = dateKey(d);
@@ -1491,7 +1493,7 @@ function render() {
 
   const listActive = listEl.classList.contains('active');
   if (shopMealIds.length === 0) {
-    if (listActive) listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Plan the week first, then your list appears here.</p><button class="empty-cta" onclick="openWeekPicker()">Plan this week</button></div>';
+    if (listActive) listEl.innerHTML = shopHeader + '<div class="empty"><div class="icon">&#128722;</div><p>No meals planned for this week.<br>Plan the week first, then your list appears here.</p><button class="empty-cta" onclick="selectWeekAndPlan(' + shopWeekOffset + ')">Plan this week</button></div>';
   } else {
     // "Checked" means: I already have this at home — leave it off the order.
     let totalItems = 0;
@@ -1973,8 +1975,8 @@ function wizardPickForDay(dk) {
     if (!r) return;
     const added = dayMeals.includes(id);
     h += '<div class="modal-meal' + (added ? ' added' : '') + '" ' + (added ? '' : 'onclick="wizardAssignToDay(\'' + dk + '\',\'' + id + '\')"') + '>';
-    h += '<div class="modal-meal-info"><div class="modal-meal-name">' + r.name + '</div>';
-    h += '<div class="modal-meal-tags">serves ' + r.servings + (added ? ' · already added' : '') + '</div></div>';
+    h += '<div class="modal-meal-info"><div class="modal-meal-name">' + esc(r.name) + '</div>';
+    h += '<div class="modal-meal-tags">serves ' + esc(r.servings) + (added ? ' · already added' : '') + '</div></div>';
     if (!added) h += '<span style="color:var(--accent);font-size:20px;font-weight:300">+</span>';
     h += '</div>';
   });
@@ -2216,12 +2218,19 @@ function showImportPreview(recipe, container) {
 
 function confirmImport(recipe) {
   // Check for duplicate
-  if (state.customRecipes.some(r => r.url === recipe.url)) {
+  if (state.customRecipes.some(r => r.url === recipe.url && !r.deleted)) {
     alert('This recipe has already been imported.');
     closeImportModal();
     return;
   }
-  state.customRecipes.push(recipe);
+  const deletedRecipe = state.customRecipes.find(r => r.url === recipe.url && r.deleted);
+  if (deletedRecipe) {
+    // Keep the original ID, including for seeds, so seeding cannot duplicate it.
+    recipe = { ...recipe, id: deletedRecipe.id, deleted: false };
+    Object.assign(deletedRecipe, recipe);
+  } else {
+    state.customRecipes.push(recipe);
+  }
   save();
   closeImportModal();
   // Mid-ritual import: drop it straight into the basket.
