@@ -1776,7 +1776,7 @@ function renderWizard() {
   // change in Gather is above the scroll position, so shift by the height delta
   // to keep the library rows visually anchored.
   const nw = document.getElementById('planning-wizard');
-  nw.scrollTop = Math.max(0, prevScroll + (nw.scrollHeight - prevHeight));
+  nw.scrollTop = old ? Math.max(0, prevScroll + (nw.scrollHeight - prevHeight)) : 0;
 }
 
 // Hide non-matching library rows in place (no re-render, keeps typing focus).

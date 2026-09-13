@@ -68,3 +68,26 @@ test('reimport restores the original ID and active duplicates stay blocked', () 
   assert.equal(alerts, 1);
   assert.equal(saved, 1);
 });
+
+test('planning opens at the top and preserves position during a refresh', () => {
+  let current = null;
+  const ctx = run(section('function esc(', '// Recipe source sites') + section('function renderWizard(', '// Hide non-matching library rows'), {
+    document: {
+      getElementById: () => current,
+      body: { insertAdjacentHTML() { current = { scrollTop: 0, scrollHeight: 2000, remove() {} }; } }
+    },
+    wizardWeekOffset: 1, wizardSearch: '', wizardPicked: [], recipeSources: [],
+    state: { calendar: {}, favorites: [] }, getAllRecipes: () => [],
+    getWeekDates: () => Array(7).fill(new Date('2026-09-14T12:00:00')),
+    fmtDate: () => 'Sep 14', wizardBasketHtml: () => '', wizardNextBtnHtml: () => ''
+  });
+  ctx.renderWizard();
+  assert.equal(current.scrollTop, 0);
+  current.scrollTop = 400;
+  current.scrollHeight = 1900;
+  ctx.renderWizard();
+  assert.equal(current.scrollTop, 500);
+  current = null;
+  ctx.renderWizard();
+  assert.equal(current.scrollTop, 0);
+});
