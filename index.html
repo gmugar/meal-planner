@@ -1078,7 +1078,8 @@ function openRecipeDetail(mealId) {
   if (!r.ingredients || r.ingredients.reduce((s,g)=>s+g.items.length,0) === 0) {
     h += '<p class="detail-desc" style="color:var(--muted);font-style:italic">No ingredients yet — use “Edit ingredients” below so this shows up on your shopping list.</p>';
   }
-  h += '<a class="detail-source" href="' + r.url + '" target="_blank">View full recipe on ' + r.site + ' &#8599;</a>';
+  if (r.instructions) h += '<div class="detail-section">Directions</div><div style="white-space:pre-wrap;line-height:1.6">' + esc(r.instructions) + '</div>';
+  if (r.url) h += '<a class="detail-source" href="' + esc(r.url) + '" target="_blank">View full recipe on ' + r.site + ' &#8599;</a>';
   h += '<button class="modal-cancel" onclick="openIngredientEditor(\'' + r.id + '\')" style="margin-top:12px">&#9998; Edit ingredients</button>';
   h += '<button class="modal-cancel" onclick="if(confirm(\'Delete this recipe? This can\\\'t be undone.\')){deleteCustomRecipe(\'' + r.id + '\');closeRecipeDetail()}" style="color:#c0392b;margin-top:8px;border:1px solid #c0392b">Delete recipe</button>';
   h += '<button class="modal-cancel" onclick="closeRecipeDetail()">Close</button>';
@@ -1391,13 +1392,13 @@ function render() {
   const favVisible = visible.filter(r => state.favorites.includes(r.id));
   const nonFavVisible = visible.filter(r => !state.favorites.includes(r.id));
 
-  let browseHTML = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button></div>';
+  let browseHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:8px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button><button class="btn-outline" onclick="openTextImportModal()">+ Paste recipe text</button></div>';
   browseHTML += '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
   browseHTML += '<input class="search-input" type="text" placeholder="Search recipes..." value="' + browseSearch.replace(/"/g,'&quot;') + '" oninput="browseSearch=this.value;render()" id="browse-search">';
   if (browseSearch) browseHTML += '<button class="search-clear" onclick="browseSearch=\'\';render()">&times;</button>';
   browseHTML += '</div>';
   if (visible.length === 0 && !q && hiddenRecipes.length === 0) {
-    browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes yet.<br>Add some from the Inbox tab or import a URL.</p><button class="empty-cta" onclick="showView(\'inbox\')">Discover recipes</button></div>';
+    browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes yet.<br>Add a recipe from a URL or paste recipe text.</p><button class="empty-cta" onclick="openTextImportModal()">Paste recipe text</button></div>';
   } else if (visible.length === 0 && q) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match "' + esc(browseSearch) + '"</p></div>';
   } else {
@@ -1730,7 +1731,7 @@ function renderWizard() {
   h += '<div class="wizard-body">';
   h += '<div class="wizard-step">Step 1 of 3 &middot; Gather</div>';
   h += '<p class="wizard-hint">Pull from your library, or go find something new on your sites.</p>';
-  h += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button></div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:12px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button><button class="btn-outline" onclick="openTextImportModal()">+ Paste recipe text</button></div>';
 
   // The basket — what's picked for this week so far (updated in place on toggle).
   h += '<div id="wizard-basket">' + wizardBasketHtml() + '</div>';
@@ -2002,6 +2003,87 @@ function wizardFinish() {
   shopWeekOffset = wizardWeekOffset;
   showView('list');
   showToast('Step 3: tick what you already have, then copy the list');
+}
+
+/* ── Recipe import from pasted text ── */
+function openTextImportModal() {
+  closeImportModal();
+  let h = '<div class="modal-overlay" id="import-modal" onclick="if(event.target===this)closeImportModal()"><div class="modal" style="max-height:85vh">';
+  h += '<h3>Paste recipe text</h3><p class="modal-sub">Paste a recipe with its title, ingredients, and directions. Headings like “Ingredients” and “Instructions” work best. You can review and edit everything before saving.</p>';
+  h += '<label for="import-text">Recipe text</label><textarea class="import-input" id="import-text" rows="12" style="resize:vertical" placeholder="Lemon rice&#10;Serves 4&#10;&#10;Ingredients&#10;2 cups rice&#10;1 lemon&#10;&#10;Instructions&#10;1. Cook the rice.&#10;2. Stir in lemon juice."></textarea>';
+  h += '<div class="import-status" id="import-status" role="status"></div><div id="import-preview-area"></div>';
+  h += '<div class="import-actions"><button class="modal-cancel" onclick="closeImportModal()" style="width:auto;margin:0">Cancel</button><button class="btn-import" id="import-btn" onclick="reviewTextImport()">Format recipe</button></div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', h);
+  document.getElementById('import-text').focus();
+}
+
+// Conservative, local extraction: keep uncertain prose in notes for review.
+function parseRecipeText(text) {
+  const lines = String(text).replace(/\r\n?/g, '\n').split('\n').map(line =>
+    line.trim().replace(/^#{1,6}\s+/, '').replace(/\*\*/g, '').replace(/^[-*•▪]\s+/, '').trim()).filter(Boolean);
+  const draft = { name: '', servings: '', ingredients: [], instructions: [], notes: [] };
+  let section = '';
+  const hasHeading = lines.some(line => /^ingredients?\s*:?$/i.test(line));
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^ingredients?\s*:?$/i.test(line)) { section = 'ingredients'; continue; }
+    if (/^(instructions?|directions?|method|preparation|steps)\s*:?$/i.test(line)) { section = 'instructions'; continue; }
+    if (/^(notes?|tips|nutrition(?:al information)?)\s*:?$/i.test(line)) { section = 'notes'; continue; }
+    const servings = line.match(/^(?:serves|servings|yield|makes)\s*:?\s*(\d+)(?:\s*(?:servings|people|portions))?\s*$/i);
+    if (servings && section !== 'instructions') { draft.servings = servings[1]; continue; }
+    if (!section && !draft.name && i === 0 && !/^[\d¼½¾⅓⅔⅛]/.test(line)) {
+      draft.name = line.replace(/^(?:recipe|title)\s*:\s*/i, ''); continue;
+    }
+    if (!hasHeading && !section && /^[\d¼½¾⅓⅔⅛]/.test(line)) section = 'ingredients';
+    if (section === 'ingredients' && /^(?:\d+[.)]\s+)?(?:preheat|heat|mix|stir|cook|bake|add|combine|serve|bring|chop|place|pour|whisk|simmer|roast)\b/i.test(line)) section = 'instructions';
+    // Ingredient subsection labels are useful context, but aren't grocery items.
+    if (section === 'ingredients' && /:$/.test(line)) { draft.notes.push(line); continue; }
+    draft[section || 'notes'].push(line);
+  }
+  return draft;
+}
+
+function reviewTextImport() {
+  const source = document.getElementById('import-text');
+  const status = document.getElementById('import-status');
+  if (!source.value.trim()) {
+    status.className = 'import-status error';
+    status.textContent = 'Paste some recipe text first.';
+    return;
+  }
+  const draft = parseRecipeText(source.value);
+  const field = (id, label, value, rows) => '<label for="' + id + '">' + label + '</label>' +
+    (rows ? '<textarea class="import-input" id="' + id + '" rows="' + rows + '">' + esc(value) + '</textarea>' :
+      '<input class="import-input" id="' + id + '" ' + (id === 'text-servings' ? 'type="number" min="1" step="1"' : 'type="text"') + ' value="' + esc(value) + '">');
+  document.getElementById('import-preview-area').innerHTML = '<div class="import-preview"><h4>Review your recipe</h4>' +
+    field('text-name', 'Recipe name', draft.name) + field('text-servings', 'Servings', draft.servings) +
+    field('text-ingredients', 'Ingredients (one per line)', draft.ingredients.join('\n'), 7) +
+    field('text-instructions', 'Directions', draft.instructions.join('\n'), 6) +
+    field('text-notes', 'Notes / other text', draft.notes.join('\n'), 3) + '</div>';
+  source.hidden = true;
+  document.querySelector('label[for="import-text"]').hidden = true;
+  status.className = 'import-status';
+  status.textContent = 'Check the fields below, especially servings and ingredients. Move any misplaced text before saving.';
+  const btn = document.getElementById('import-btn');
+  btn.textContent = 'Add to library';
+  btn.onclick = saveTextImport;
+  document.getElementById('text-name').focus();
+}
+
+function saveTextImport() {
+  const value = id => document.getElementById(id).value.trim();
+  const name = value('text-name');
+  const servings = Number(value('text-servings'));
+  const ingredients = parseIngredientLines(value('text-ingredients'));
+  if (!name || !Number.isInteger(servings) || servings < 1 || !ingredients.length) {
+    const status = document.getElementById('import-status');
+    status.className = 'import-status error';
+    status.textContent = 'Enter a recipe name, a positive whole number of servings, and at least one ingredient.';
+    return;
+  }
+  confirmImport({ id: 'custom_' + crypto.randomUUID(), name, servings, ingredients,
+    instructions: value('text-instructions'), desc: value('text-notes'),
+    site: 'Pasted recipe', url: '', tags: [], custom: true });
 }
 
 /* ── Recipe import from URL ── */
@@ -2284,12 +2366,12 @@ function showImportPreview(recipe, container) {
 
 function confirmImport(recipe) {
   // Check for duplicate
-  if (state.customRecipes.some(r => r.url === recipe.url && !r.deleted)) {
+  if (state.customRecipes.some(r => recipe.url && r.url === recipe.url && !r.deleted)) {
     alert('This recipe has already been imported.');
     closeImportModal();
     return;
   }
-  const deletedRecipe = state.customRecipes.find(r => r.url === recipe.url && r.deleted);
+  const deletedRecipe = state.customRecipes.find(r => recipe.url && r.url === recipe.url && r.deleted);
   if (deletedRecipe) {
     // Keep the original ID, including for seeds, so seeding cannot duplicate it.
     recipe = { ...recipe, id: deletedRecipe.id, deleted: false };

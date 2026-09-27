@@ -165,3 +165,50 @@ test('configured recipe service returns HTML and exposes actionable errors', asy
   fail = true;
   await assert.rejects(ctx.fetchRecipeHtml('https://simplehomeedit.com/recipe/test/'), /HTTP 403/);
 });
+
+test('pasted recipe separates markdown sections, amounts, directions and notes', () => {
+  const ctx = run(section('function parseRecipeText(', 'function reviewTextImport(') + section('function splitQtyName(', 'function parseRecipeFromHtml('));
+  const draft = ctx.parseRecipeText('# Lemon rice\r\nServes 2\r\nA quick dinner.\r\n## Ingredients\r\nFor the rice:\r\n- 1½ cups rice\r\n• 1 lemon\r\nSalt to taste\r\n## Instructions\r\n1. Cook rice.\r\n2. Add lemon.\r\nNotes:\r\nKeep leftovers chilled.');
+  assert.equal(draft.name, 'Lemon rice');
+  assert.equal(draft.servings, '2');
+  assert.equal(draft.ingredients.length, 3);
+  assert.equal(draft.instructions.join('\n'), '1. Cook rice.\n2. Add lemon.');
+  assert.ok(draft.notes.includes('A quick dinner.'));
+  assert.ok(draft.notes.includes('Keep leftovers chilled.'));
+  const items = ctx.parseIngredientLines(draft.ingredients.join('\n')).flatMap(group => group.items);
+  assert.equal(items.find(item => item.name === 'rice').qty, '1½ cups');
+});
+
+test('heading-free recipes retain uncertain prose and do not invent servings', () => {
+  const ctx = run(section('function parseRecipeText(', 'function reviewTextImport('));
+  const draft = ctx.parseRecipeText('Rice\n2 cups rice\nSalt to taste\n1. Bring water to a boil.\n2. Add rice.');
+  assert.equal(draft.servings, '');
+  assert.equal(draft.ingredients.length, 2);
+  assert.equal(draft.instructions.length, 2);
+  assert.equal(ctx.parseRecipeText('Some unstructured prose').ingredients.length, 0);
+});
+
+test('pasted import validates review, preserves edits and saves separate recipes without URLs', () => {
+  let saves = 0;
+  const state = { customRecipes: [{ id: 'deleted', url: '', deleted: true }] };
+  const fields = Object.fromEntries(['text-name', 'text-servings', 'text-ingredients', 'text-instructions', 'text-notes', 'import-status'].map(id => [id, {value: ''}]));
+  const ctx = run(section('function saveTextImport(', '/* ── Recipe import from URL') + section('function splitQtyName(', 'function parseRecipeFromHtml(') + section('function confirmImport(', 'function deleteCustomRecipe('), {
+    state, crypto: require('node:crypto').webcrypto,
+    document: { getElementById: id => fields[id] },
+    save() { saves++; }, closeImportModal() {}, showToast() {}, render() {}, alert() { assert.fail('Unrelated pasted recipes are not duplicates'); }
+  });
+  ctx.saveTextImport();
+  assert.equal(saves, 0);
+  fields['text-name'].value = 'Edited rice';
+  fields['text-servings'].value = '2';
+  fields['text-ingredients'].value = '2 cups rice';
+  fields['text-instructions'].value = 'Cook for 20 minutes.';
+  ctx.saveTextImport();
+  fields['text-name'].value = 'Another recipe';
+  ctx.saveTextImport();
+  assert.equal(saves, 2);
+  assert.equal(state.customRecipes.length, 3);
+  assert.equal(state.customRecipes[0].deleted, true);
+  assert.equal(state.customRecipes[1].instructions, 'Cook for 20 minutes.');
+  assert.notEqual(state.customRecipes[1].id, state.customRecipes[2].id);
+});
