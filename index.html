@@ -2011,6 +2011,7 @@ function openTextImportModal() {
   let h = '<div class="modal-overlay" id="import-modal" onclick="if(event.target===this)closeImportModal()"><div class="modal" style="max-height:85vh">';
   h += '<h3>Write a recipe</h3><p class="modal-sub">Only the title and ingredients are needed — ingredients go on your shopping list.</p>';
   h += '<label for="text-name">Title</label><input class="import-input" id="text-name" type="text" placeholder="Lemon rice">';
+  h += '<label for="text-servings">Servings (optional)</label><input class="import-input" id="text-servings" type="number" min="1" step="1" inputmode="numeric" placeholder="4">';
   h += '<label for="text-ingredients">Ingredients (one per line)</label><textarea class="import-input" id="text-ingredients" rows="7" style="resize:vertical" placeholder="2 cups rice&#10;1 lemon&#10;Salt to taste"></textarea>';
   h += '<label for="text-instructions">Recipe (optional)</label><textarea class="import-input" id="text-instructions" rows="6" style="resize:vertical" placeholder="How to cook it — skip if you already know"></textarea>';
   h += '<div class="import-status" id="import-status" role="status"></div>';
@@ -2022,14 +2023,17 @@ function openTextImportModal() {
 function saveTextImport() {
   const value = id => document.getElementById(id).value.trim();
   const name = value('text-name');
+  const servings = value('text-servings') ? Number(value('text-servings')) : 4;
   const ingredients = parseIngredientLines(value('text-ingredients'));
-  if (!name || !ingredients.length) {
+  const error = !name || !ingredients.length ? 'Add a title and at least one ingredient.' :
+    !Number.isInteger(servings) || servings < 1 ? 'Servings should be a whole number, or leave it blank.' : '';
+  if (error) {
     const status = document.getElementById('import-status');
     status.className = 'import-status error';
-    status.textContent = 'Add a title and at least one ingredient.';
+    status.textContent = error;
     return;
   }
-  confirmImport({ id: 'custom_' + crypto.randomUUID(), name, servings: 4, ingredients,
+  confirmImport({ id: 'custom_' + crypto.randomUUID(), name, servings, ingredients,
     instructions: value('text-instructions'), desc: '',
     site: 'My recipe', url: '', tags: [], custom: true });
 }

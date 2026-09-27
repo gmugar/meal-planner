@@ -169,7 +169,7 @@ test('configured recipe service returns HTML and exposes actionable errors', asy
 test('written recipe needs a title and ingredients, but directions are optional', () => {
   let saves = 0;
   const state = { customRecipes: [{ id: 'deleted', url: '', deleted: true }] };
-  const fields = Object.fromEntries(['text-name', 'text-ingredients', 'text-instructions', 'import-status'].map(id => [id, {value: ''}]));
+  const fields = Object.fromEntries(['text-name', 'text-servings', 'text-ingredients', 'text-instructions', 'import-status'].map(id => [id, {value: ''}]));
   const ctx = run(section('function saveTextImport(', '/* ── Recipe import from URL') + section('function splitQtyName(', 'function parseRecipeFromHtml(') + section('function confirmImport(', 'function deleteCustomRecipe('), {
     state, crypto: require('node:crypto').webcrypto,
     document: { getElementById: id => fields[id] },
@@ -184,8 +184,14 @@ test('written recipe needs a title and ingredients, but directions are optional'
   ctx.saveTextImport();
   fields['text-name'].value = 'Another recipe';
   fields['text-instructions'].value = 'Cook for 20 minutes.';
+  fields['text-servings'].value = '2.5';
+  ctx.saveTextImport();
+  assert.equal(saves, 1);
+  fields['text-servings'].value = '2';
   ctx.saveTextImport();
   assert.equal(saves, 2);
+  assert.equal(state.customRecipes[1].servings, 4);
+  assert.equal(state.customRecipes[2].servings, 2);
   assert.equal(state.customRecipes.length, 3);
   assert.equal(state.customRecipes[0].deleted, true);
   assert.equal(state.customRecipes[1].instructions, '');
