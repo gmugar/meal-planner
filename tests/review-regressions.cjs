@@ -38,18 +38,107 @@ test('shopping list keeps the week selected by its caller', () => {
   ctx.showView('list');
   assert.equal(ctx.shopWeekOffset, 3);
 });
-test('day picker treats imported markup as text', () => {
+test('set-nights step treats imported markup as text', () => {
   let inserted = '';
-  const ctx = run(section('function esc(', '// Recipe source sites') + section('function wizardPickForDay(', 'function wizardFinish('), {
-    document: { getElementById: () => null, body: { insertAdjacentHTML: (_, value) => inserted = value } },
-    wizardAssignments: {}, wizardPicked: ['demo'],
+  const ctx = run(section('function esc(', '// Recipe source sites') + section('function renderWizardStep2(', 'function wizardBackToStep1('), {
+    document: { getElementById: () => ({ remove() {}, scrollTop: 0 }), body: { insertAdjacentHTML: (_, value) => inserted = value } },
+    wizardStep: 1, wizardWeekOffset: 1, wizardAssignments: {}, wizardMade: {}, wizardPicked: ['demo'],
     getAllRecipes: () => [{ id: 'demo', name: '<img src=x onerror="alert(1)">', servings: 4 }],
-    dayName: () => 'Mon', fmtDate: () => 'Sep 14'
+    getWeekDates: () => [new Date('2099-01-05T12:00:00')], dateKey: () => '2099-01-05',
+    dayName: () => 'Monday', fmtDate: () => 'Jan 5'
   });
-  ctx.wizardPickForDay('2026-09-14');
+  ctx.renderWizardStep2();
   assert.ok(!inserted.includes('<img'));
   assert.ok(inserted.includes('&lt;img'));
 });
+
+// The week's menu: helpers run against the real date functions.
+const menuSource = section('function getWeekDates(', 'function fmtDate(') + section('function getMealsForWeek(', 'function changeShopWeek(');
+function menuCtx(state, extra = {}) {
+  return run(menuSource + section('function getMenu(', 'function openRecipeDetail('), { state, save() {}, render() {}, ...extra });
+}
+
+test('week breakdown splits tonight, set nights, made, and any night', () => {
+  const state = { calendar: {}, menus: {} };
+  const ctx = menuCtx(state);
+  const next = ctx.getWeekDates(1).map(ctx.dateKey), last = ctx.getWeekDates(-1).map(ctx.dateKey);
+  state.menus[next[0]] = ['a', 'b', 'c'];
+  state.calendar[next[4]] = ['b'];
+  let wk = ctx.getWeekBreakdown(1);
+  assert.deepEqual([...wk.anyNight], ['a', 'c']);
+  assert.deepEqual([...wk.pinned.map(p => p.id)], ['b']);
+  assert.equal(wk.made.length, 0);
+  // A week planned before menus existed: its menu is what's on the calendar.
+  state.calendar[last[1]] = ['x'];
+  wk = ctx.getWeekBreakdown(-1);
+  assert.deepEqual([...wk.made.map(m => m.id)], ['x']);
+  assert.equal(wk.anyNight.length, 0);
+  // Picking tonight moves a meal off any night; changing puts it back.
+  const todayK = ctx.dateKey(new Date());
+  state.menus[ctx.getWeekDates(0).map(ctx.dateKey)[0]] = ['p', 'q'];
+  ctx.makeTonight('p');
+  assert.deepEqual([...ctx.getWeekBreakdown(0).tonight], ['p']);
+  assert.deepEqual([...ctx.getWeekBreakdown(0).anyNight], ['q']);
+  ctx.unpinMeal(todayK, 'p', 0);
+  assert.equal(state.calendar[todayK], undefined);
+  assert.deepEqual([...ctx.getWeekBreakdown(0).anyNight], ['p', 'q']);
+});
+
+test('unpinning in a legacy week keeps the meal on the menu', () => {
+  const state = { calendar: {}, menus: {} };
+  const ctx = menuCtx(state);
+  const next = ctx.getWeekDates(1).map(ctx.dateKey);
+  state.calendar[next[2]] = ['legacy'];
+  ctx.unpinMeal(next[2], 'legacy', 1);
+  assert.deepEqual([...state.menus[next[0]]], ['legacy']);
+  assert.deepEqual([...ctx.getWeekBreakdown(1).anyNight], ['legacy']);
+});
+
+test('finishing the ritual saves the menu, rebuilds pins, and keeps what was made', () => {
+  const state = { calendar: {}, menus: {}, checked: {} };
+  const base = menuCtx(state);
+  const next = base.getWeekDates(1).map(base.dateKey), last = base.getWeekDates(-1).map(base.dateKey);
+  state.calendar[next[0]] = ['old'];
+  state.calendar[last[0]] = ['history'];
+  let view;
+  const ctx = run(menuSource + section('function wizardFinish(', '/* ── Write your own recipe'), {
+    state, wizardWeekOffset: 1, wizardPicked: ['a', 'b', 'c'],
+    wizardAssignments: { a: next[3], old: next[0] }, wizardMade: {}, wizardCarried: ['c'],
+    getAllRecipes: () => [{ id: 'c', ingredients: [{ cat: 'Produce', items: [{ name: 'Onion', qty: '1' }] }] }],
+    save() {}, closeWizard() {}, showView(v) { view = v; }, showToast() {}, shopWeekOffset: 0
+  });
+  ctx.wizardFinish();
+  assert.deepEqual([...state.menus[next[0]]], ['a', 'b', 'c']);
+  assert.deepEqual([...state.calendar[next[3]]], ['a']);
+  assert.equal(state.calendar[next[0]], undefined, 'meals dropped from the menu leave their nights');
+  assert.deepEqual([...state.calendar[last[0]]], ['history']);
+  assert.equal(state.checked[next[0] + '|c|Onion'], true, 'carried-over ingredients are marked have');
+  assert.equal(ctx.shopWeekOffset, 1);
+  assert.equal(view, 'list');
+});
+
+test('a new week starts with last week\'s uneaten meals; a planned week keeps its menu', () => {
+  const state = { calendar: {}, menus: {} };
+  const base = menuCtx(state);
+  const next = base.getWeekDates(1).map(base.dateKey), cur = base.getWeekDates(0).map(base.dateKey);
+  state.menus[cur[0]] = ['ate', 'left', 'gone'];
+  state.calendar[cur[0]] = ['ate'];
+  const ctx = run(menuSource + section('function getMenu(', 'function openRecipeDetail(') + section('function selectWeekAndPlan(', '// Planning wizard'), {
+    state, wizardWeekOffset: 0, wizardSearch: '', wizardPicked: [], wizardCarried: [], wizardAssignments: {}, wizardMade: {},
+    getAllRecipes: () => [{ id: 'ate' }, { id: 'left' }],
+    closeWeekPicker() {}, renderWizard() {}
+  });
+  ctx.selectWeekAndPlan(1);
+  assert.deepEqual([...ctx.wizardPicked], ['left']);
+  assert.deepEqual([...ctx.wizardCarried], ['left']);
+  state.menus[next[0]] = ['chosen'];
+  state.calendar[next[2]] = ['chosen'];
+  ctx.selectWeekAndPlan(1);
+  assert.deepEqual([...ctx.wizardPicked], ['chosen']);
+  assert.equal(ctx.wizardCarried.length, 0);
+  assert.equal(ctx.wizardAssignments.chosen, next[2]);
+});
+
 test('reimport restores the original ID and active duplicates stay blocked', () => {
   let saved = 0, alerts = 0;
   const state = { customRecipes: [{ id: 'seed', url: 'https://example.com/recipe', deleted: true }] };
@@ -71,7 +160,7 @@ test('reimport restores the original ID and active duplicates stay blocked', () 
 
 test('planning opens at the top and preserves position during a refresh', () => {
   let current = null;
-  const ctx = run(section('function esc(', '// Recipe source sites') + section('function renderWizard(', '// Hide non-matching library rows'), {
+  const ctx = run(section('function esc(', '// Recipe source sites') + section('/* ── Library ordering', 'function getCardBorderClass(') + section('function renderWizard(', '// Hide non-matching library rows'), {
     document: {
       getElementById: () => current,
       body: { insertAdjacentHTML() { current = { scrollTop: 0, scrollHeight: 2000, remove() {} }; } }
@@ -198,4 +287,14 @@ test('written recipe needs a title and ingredients, but directions are optional'
   assert.equal(state.customRecipes[2].instructions, 'Cook for 20 minutes.');
   assert.equal(state.customRecipes[1].ingredients.flatMap(g => g.items).find(i => i.name === 'rice').qty, '1½ cups');
   assert.notEqual(state.customRecipes[1].id, state.customRecipes[2].id);
+});
+test('library sorts by rotation: favorites, due, not made, then recently made', () => {
+  const day = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const state = { favorites: ['fav'], calendar: { [day(40)]: ['old', 'fav'], [day(21)]: ['mid'], [day(3)]: ['recent'], [day(-2)]: ['fresh'] } };
+  const ctx = run(section('/* ── Library ordering', 'function getCardBorderClass('), { state });
+  const recipes = ['recent', 'mid', 'fresh', 'fav', 'old', 'new'].map((id, i) => ({ id, name: id, tags: i % 2 ? ['one-pan'] : [], added: id === 'new' ? '2026-09-01' : '' }));
+  const groups = ctx.libraryGroups(recipes, ctx.getLastCooked());
+  assert.equal(JSON.stringify(groups.map(g => [g.key, g.items.map(r => r.id)])), JSON.stringify([['fav', ['fav']], ['due', ['old', 'mid']], ['fresh', ['new', 'fresh']], ['recent', ['recent']]]));
+  assert.ok(!ctx.tagChipsHtml(recipes, '', 'f').includes('gluten-free'));
+  assert.ok(ctx.tagChipsHtml(recipes, 'one-pan', 'f').includes('filter-chip on'));
 });
