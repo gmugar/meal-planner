@@ -1195,6 +1195,7 @@ function render() {
   const visible = filtered.filter(r => !hiddenSet.has(r.id));
   const hiddenRecipes = filtered.filter(r => hiddenSet.has(r.id));
   const lastCooked = getLastCooked();
+  const counts = librarySort === 'cooked' ? getCookCounts() : null;
 
   let browseHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:8px"><button class="btn-outline" onclick="openImportModal()">+ Add recipe from URL</button><button class="btn-outline" onclick="openTextImportModal()">+ Write a recipe</button></div>';
   browseHTML += '<div class="search-wrap"><span class="search-icon">&#128269;</span>';
@@ -1207,9 +1208,9 @@ function render() {
   } else if (visible.length === 0) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match' + (q ? ' "' + esc(browseSearch) + '"' : ' that tag') + '</p></div>';
   } else {
-    libraryGroups(visible, lastCooked, librarySort).forEach(g => {
+    libraryGroups(visible, lastCooked, librarySort, counts).forEach(g => {
       browseHTML += '<div class="section-label">' + g.label + ' (' + g.items.length + ')</div>';
-      g.items.forEach(r => { browseHTML += renderCard(r, false, lastCooked[r.id], g.key === 'recent'); });
+      g.items.forEach(r => { browseHTML += renderCard(r, false, lastCooked[r.id], g.key === 'recent', counts && counts[r.id]); });
     });
   }
   // Hidden recipes toggle
@@ -1343,7 +1344,7 @@ let browseTag = '';
 let wizardTag = '';
 // Sort mode is a per-device convenience, shared by both surfaces.
 let librarySort = 'rotation';
-try { if (localStorage.getItem('librarySort') === 'az') librarySort = 'az'; } catch (e) {}
+try { const k = localStorage.getItem('librarySort'); if (k === 'az' || k === 'cooked') librarySort = k; } catch (e) {}
 
 function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 
@@ -1361,6 +1362,17 @@ function getLastCooked() {
   return lastCooked;
 }
 
+// How many past nights each recipe was made, from the calendar history.
+function getCookCounts() {
+  const counts = {};
+  const today0 = startOfToday();
+  Object.keys(state.calendar).forEach(dk => {
+    if (new Date(dk + 'T00:00:00') >= today0) return;
+    (state.calendar[dk]||[]).forEach(id => { counts[id] = (counts[id]||0) + 1; });
+  });
+  return counts;
+}
+
 function cookedAgo(d) {
   const days = Math.round((startOfToday() - d) / 864e5);
   if (days <= 1) return 'yesterday';
@@ -1373,7 +1385,19 @@ function hasTag(r, tag) { return !tag || (r.tags||[]).includes(tag); }
 // Rotation order: favorites pinned, then due for a repeat (longest since cooked
 // first), then never made (newest added first), then made in the last two weeks.
 // A–Z: favorites pinned, then everything else alphabetically.
-function libraryGroups(recipes, lastCooked, sort) {
+// Most cooked: favorites pinned, then by times made (ties: most recent first),
+// then never made, alphabetically.
+function libraryGroups(recipes, lastCooked, sort, counts) {
+  if (sort === 'cooked') {
+    counts = counts || {};
+    const byCount = (a, b) => (counts[b.id]||0) - (counts[a.id]||0) || (lastCooked[b.id]||0) - (lastCooked[a.id]||0) || a.name.localeCompare(b.name);
+    const rest = recipes.filter(r => !state.favorites.includes(r.id));
+    return [
+      { key: 'fav', label: '&#11088; Favorites', items: recipes.filter(r => state.favorites.includes(r.id)).sort(byCount) },
+      { key: 'cooked', label: 'Most cooked', items: rest.filter(r => counts[r.id]).sort(byCount) },
+      { key: 'fresh', label: 'Not made yet', items: rest.filter(r => !counts[r.id]).sort(byCount) }
+    ].filter(g => g.items.length);
+  }
   if (sort === 'az') {
     const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     return [
@@ -1414,7 +1438,7 @@ function tagChipsHtml(recipes, active, onPick) {
 
 function sortMenuHtml() {
   let h = '<div class="sort-row">Sort';
-  [['rotation', 'Rotation'], ['az', 'A&ndash;Z']].forEach(([k, label]) => {
+  [['rotation', 'Rotation'], ['az', 'A&ndash;Z'], ['cooked', 'Most cooked']].forEach(([k, label]) => {
     h += '<button class="sort-opt' + (librarySort === k ? ' on' : '') + '" aria-pressed="' + (librarySort === k) + '" onclick="setLibrarySort(\'' + k + '\')">' + label + '</button>';
   });
   return h + '</div>';
@@ -1447,7 +1471,7 @@ function getCardBorderClass(r) {
   return '';
 }
 
-function renderCard(r, isHiddenCard, lastCookedDate, isRecent) {
+function renderCard(r, isHiddenCard, lastCookedDate, isRecent, timesMade) {
   const isFav = state.favorites.includes(r.id);
   const bc = getCardBorderClass(r);
   let html = '<div class="card ' + bc + (isHiddenCard ? ' hidden-card' : '') + (isRecent ? ' recent-card' : '') + '">';
@@ -1461,7 +1485,7 @@ function renderCard(r, isHiddenCard, lastCookedDate, isRecent) {
     else if (t==='fakeaway') html += '<span class="tag tag-one">fakeaway</span>';
   });
   html += '<span class="tag" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">serves ' + r.servings + '</span>';
-  if (lastCookedDate) html += '<span class="tag" style="color:var(--muted)">made ' + cookedAgo(lastCookedDate) + '</span>';
+  if (lastCookedDate) html += '<span class="tag" style="color:var(--muted)">made ' + (timesMade ? timesMade + '&times; &middot; last ' : '') + cookedAgo(lastCookedDate) + '</span>';
   html += '</div>';
   if (r.desc) html += '<div class="card-desc">' + esc(r.desc) + '</div>';
   html += '</div></div>';
@@ -1592,6 +1616,7 @@ function renderWizard() {
 
   // Most recent past cook date per recipe → "last cooked 2w ago" hints.
   const lastCooked = getLastCooked();
+  const counts = librarySort === 'cooked' ? getCookCounts() : null;
 
   let h = '<div class="wizard-overlay" id="planning-wizard">';
   h += '<div class="wizard-header"><h2>Plan: ' + weekLabel + '</h2>';
@@ -1611,7 +1636,7 @@ function renderWizard() {
   const allR = getAllRecipes();
   if (wizardTag && !allR.some(r => hasTag(r, wizardTag))) wizardTag = '';
   h += sortMenuHtml() + tagChipsHtml(allR, wizardTag, 'setWizardTag');
-  libraryGroups(allR, lastCooked, librarySort).forEach(g => {
+  libraryGroups(allR, lastCooked, librarySort, counts).forEach(g => {
     h += '<div class="wizard-group"><div class="wizard-group-label">' + g.label + '</div>';
     g.items.forEach(r => {
       const isPicked = wizardPicked.includes(r.id);
@@ -1619,7 +1644,7 @@ function renderWizard() {
       const lc = lastCooked[r.id];
       h += '<div class="wizard-recipe' + (isPicked ? ' picked' : '') + (g.key === 'recent' ? ' recent' : '') + '" data-id="' + esc(r.id) + '" data-name="' + esc(r.name.toLowerCase()) + '" data-tags="' + esc((r.tags||[]).join(' ')) + '" onclick="toggleWizardPick(\'' + r.id + '\')">';
       h += '<div class="wizard-recipe-info"><div class="wizard-recipe-name">' + (isFav ? '&#9733; ' : '') + esc(r.name) + '</div>';
-      h += '<div class="wizard-recipe-meta">' + (lc ? 'last cooked ' + cookedAgo(lc) + ' &middot; ' : '') + 'serves ' + esc(r.servings) + '</div></div>';
+      h += '<div class="wizard-recipe-meta">' + (lc ? (counts ? 'cooked ' + counts[r.id] + '&times; &middot; last ' : 'last cooked ') + cookedAgo(lc) + ' &middot; ' : '') + 'serves ' + esc(r.servings) + '</div></div>';
       h += '<div class="wizard-check">' + (isPicked ? '&#10003;' : '') + '</div>';
       h += '</div>';
     });

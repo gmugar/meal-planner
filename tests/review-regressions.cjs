@@ -305,3 +305,14 @@ test('A–Z sort keeps favorites pinned and ignores cook history', () => {
   const groups = ctx.libraryGroups(recipes, { b: new Date() }, 'az');
   assert.equal(JSON.stringify(groups.map(g => [g.key, g.items.map(r => r.id)])), JSON.stringify([['fav', ['z']], ['all', ['a', 'b', 'C']]]));
 });
+test('Most cooked sort ranks by times made, ties by most recent', () => {
+  const day = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const state = { favorites: ['f'], calendar: { [day(30)]: ['a', 'b'], [day(20)]: ['a'], [day(10)]: ['c'], [day(5)]: ['b'], [day(-1)]: ['a', 'n'] } };
+  const ctx = run(section('/* ── Library ordering', 'function getCardBorderClass('), { state });
+  const counts = ctx.getCookCounts();
+  assert.equal(counts.a, 2);
+  assert.equal(counts.n, undefined);
+  const recipes = ['c', 'a', 'n', 'b', 'f'].map(id => ({ id, name: id, tags: [] }));
+  const groups = ctx.libraryGroups(recipes, ctx.getLastCooked(), 'cooked', counts);
+  assert.equal(JSON.stringify(groups.map(g => [g.key, g.items.map(r => r.id)])), JSON.stringify([['fav', ['f']], ['cooked', ['b', 'a', 'c']], ['fresh', ['n']]]));
+});
