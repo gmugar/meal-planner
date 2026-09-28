@@ -298,3 +298,10 @@ test('library sorts by rotation: favorites, due, not made, then recently made', 
   assert.ok(!ctx.tagChipsHtml(recipes, '', 'f').includes('gluten-free'));
   assert.ok(ctx.tagChipsHtml(recipes, 'one-pan', 'f').includes('filter-chip on'));
 });
+test('A–Z sort keeps favorites pinned and ignores cook history', () => {
+  const state = { favorites: ['z'], calendar: {} };
+  const ctx = run(section('/* ── Library ordering', 'function getCardBorderClass('), { state });
+  const recipes = ['b', 'z', 'C', 'a'].map(id => ({ id, name: id, tags: [] }));
+  const groups = ctx.libraryGroups(recipes, { b: new Date() }, 'az');
+  assert.equal(JSON.stringify(groups.map(g => [g.key, g.items.map(r => r.id)])), JSON.stringify([['fav', ['z']], ['all', ['a', 'b', 'C']]]));
+});

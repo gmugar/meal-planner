@@ -174,6 +174,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .wizard-pin.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent-text);font-weight:600}
 .wizard-pin.taken{border-style:dashed}
 .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.sort-row{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;color:var(--muted)}
+.sort-opt{font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid transparent;background:none;color:var(--muted);cursor:pointer}
+.sort-opt.on{border-color:var(--border);background:var(--card);color:var(--text);font-weight:600}
 .filter-chip{font-size:12px;padding:5px 12px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer}
 .filter-chip.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent-text);font-weight:600}
 .wizard-group-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:12px 0 6px}
@@ -1198,13 +1201,13 @@ function render() {
   browseHTML += '<input class="search-input" type="text" placeholder="Search recipes..." value="' + browseSearch.replace(/"/g,'&quot;') + '" oninput="browseSearch=this.value;render()" id="browse-search">';
   if (browseSearch) browseHTML += '<button class="search-clear" onclick="browseSearch=\'\';render()">&times;</button>';
   browseHTML += '</div>';
-  browseHTML += tagChipsHtml(allR, browseTag, 'setBrowseTag');
+  browseHTML += sortMenuHtml() + tagChipsHtml(allR, browseTag, 'setBrowseTag');
   if (visible.length === 0 && !q && !browseTag && hiddenRecipes.length === 0) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes yet.<br>Add a recipe from a URL or write your own.</p><button class="empty-cta" onclick="openTextImportModal()">Write a recipe</button></div>';
   } else if (visible.length === 0) {
     browseHTML += '<div class="empty"><div class="icon">&#128269;</div><p>No recipes match' + (q ? ' "' + esc(browseSearch) + '"' : ' that tag') + '</p></div>';
   } else {
-    libraryGroups(visible, lastCooked).forEach(g => {
+    libraryGroups(visible, lastCooked, librarySort).forEach(g => {
       browseHTML += '<div class="section-label">' + g.label + ' (' + g.items.length + ')</div>';
       g.items.forEach(r => { browseHTML += renderCard(r, false, lastCooked[r.id], g.key === 'recent'); });
     });
@@ -1338,6 +1341,9 @@ const LIB_TAGS = [['one-pan','One-pan'],['one-pot','One-pot'],['fakeaway','Fakea
 const RECENT_DAYS = 14;
 let browseTag = '';
 let wizardTag = '';
+// Sort mode is a per-device convenience, shared by both surfaces.
+let librarySort = 'rotation';
+try { if (localStorage.getItem('librarySort') === 'az') librarySort = 'az'; } catch (e) {}
 
 function startOfToday() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 
@@ -1366,7 +1372,15 @@ function hasTag(r, tag) { return !tag || (r.tags||[]).includes(tag); }
 
 // Rotation order: favorites pinned, then due for a repeat (longest since cooked
 // first), then never made (newest added first), then made in the last two weeks.
-function libraryGroups(recipes, lastCooked) {
+// A–Z: favorites pinned, then everything else alphabetically.
+function libraryGroups(recipes, lastCooked, sort) {
+  if (sort === 'az') {
+    const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    return [
+      { key: 'fav', label: '&#11088; Favorites', items: recipes.filter(r => state.favorites.includes(r.id)).sort(byName) },
+      { key: 'all', label: 'All recipes', items: recipes.filter(r => !state.favorites.includes(r.id)).sort(byName) }
+    ].filter(g => g.items.length);
+  }
   const cutoff = startOfToday() - RECENT_DAYS * 864e5;
   const byOldest = (a, b) => (lastCooked[a.id]||0) - (lastCooked[b.id]||0);
   const groups = { fav: [], due: [], fresh: [], recent: [] };
@@ -1396,6 +1410,21 @@ function tagChipsHtml(recipes, active, onPick) {
     h += '<button class="filter-chip' + (active === t ? ' on' : '') + '" data-tag="' + t + '" aria-pressed="' + (active === t) + '" onclick="' + onPick + '(\'' + t + '\')">' + label + '</button>';
   });
   return h + '</div>';
+}
+
+function sortMenuHtml() {
+  let h = '<div class="sort-row">Sort';
+  [['rotation', 'Rotation'], ['az', 'A&ndash;Z']].forEach(([k, label]) => {
+    h += '<button class="sort-opt' + (librarySort === k ? ' on' : '') + '" aria-pressed="' + (librarySort === k) + '" onclick="setLibrarySort(\'' + k + '\')">' + label + '</button>';
+  });
+  return h + '</div>';
+}
+
+function setLibrarySort(k) {
+  librarySort = k;
+  try { localStorage.setItem('librarySort', k); } catch (e) {}
+  render();
+  if (document.getElementById('planning-wizard') && wizardStep === 1) renderWizard();
 }
 
 function setBrowseTag(t) { browseTag = browseTag === t ? '' : t; render(); }
@@ -1581,8 +1610,8 @@ function renderWizard() {
 
   const allR = getAllRecipes();
   if (wizardTag && !allR.some(r => hasTag(r, wizardTag))) wizardTag = '';
-  h += tagChipsHtml(allR, wizardTag, 'setWizardTag');
-  libraryGroups(allR, lastCooked).forEach(g => {
+  h += sortMenuHtml() + tagChipsHtml(allR, wizardTag, 'setWizardTag');
+  libraryGroups(allR, lastCooked, librarySort).forEach(g => {
     h += '<div class="wizard-group"><div class="wizard-group-label">' + g.label + '</div>';
     g.items.forEach(r => {
       const isPicked = wizardPicked.includes(r.id);
